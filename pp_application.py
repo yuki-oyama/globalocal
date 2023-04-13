@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 from optimparallel import minimize_parallel
 from numdifftools import Hessian
+from autograd import grad
 from model import PrismRL, RL
 from graph import Graph
 from utils import Timer
@@ -29,8 +30,8 @@ def float_or_none(value):
 
 # Model parameters
 model_arg = add_argument_group('Model')
-model_arg.add_argument('--rl', type=str2bool, default=False, help='if estimate RL or not')
-model_arg.add_argument('--prism', type=str2bool, default=True, help='if estimate prism RL or not')
+model_arg.add_argument('--rl', type=str2bool, default=True, help='if estimate RL or not')
+model_arg.add_argument('--prism', type=str2bool, default=False, help='if estimate prism RL or not')
 model_arg.add_argument('--parallel', type=str2bool, default=False, help='if implement parallel computation or not')
 model_arg.add_argument('--version', type=str, default='test', help='version name')
 
@@ -38,16 +39,16 @@ model_arg.add_argument('--version', type=str, default='test', help='version name
 model_arg.add_argument('--state_key', type=str, default='d', help='od or d')
 model_arg.add_argument('--T', type=int, default=15, help='time constraint')
 model_arg.add_argument('--uturn', type=str2bool, default=True, help='if add uturn dummy or not')
-model_arg.add_argument('--uturn_penalty', type=float, default=-10., help='penalty for uturn')
-model_arg.add_argument('--min_n', type=int, default=0, help='minimum number observed for d')
+model_arg.add_argument('--uturn_penalty', type=float, default=-20., help='penalty for uturn')
+model_arg.add_argument('--min_n', type=int, default=8, help='minimum number observed for d')
 
 # parameters
 model_arg.add_argument('--mu_g', type=float, default=1., help='scale for global utility')
-model_arg.add_argument('--vars_g', nargs='+', type=str, default=['length', 'crosswalk'], help='explanatory variables')
-model_arg.add_argument('--init_beta_g', nargs='+', type=float, default=[-2.,-2.], help='initial parameter values')
-model_arg.add_argument('--lb_g', nargs='+', type=float_or_none, default=[None,None], help='lower bounds')
-model_arg.add_argument('--ub_g', nargs='+', type=float_or_none, default=[0.,0.], help='upper bounds')
-model_arg.add_argument('--vars_l', nargs='+', type=str, default=['vegetation', 'sky', 'wall'], help='explanatory variables')
+model_arg.add_argument('--vars_g', nargs='+', type=str, default=['length', 'crosswalk', 'greenlen'], help='explanatory variables')
+model_arg.add_argument('--init_beta_g', nargs='+', type=float, default=[-0.3,-0.9, 0.2], help='initial parameter values')
+model_arg.add_argument('--lb_g', nargs='+', type=float_or_none, default=[None,None,None], help='lower bounds')
+model_arg.add_argument('--ub_g', nargs='+', type=float_or_none, default=[0.,0.,0.], help='upper bounds')
+model_arg.add_argument('--vars_l', nargs='+', type=str, default=['vegetation'], help='explanatory variables')
 model_arg.add_argument('--init_beta_l', nargs='+', type=float, default=[0.1], help='initial parameter values')
 model_arg.add_argument('--lb_l', nargs='+', type=float_or_none, default=[None], help='lower bounds')
 model_arg.add_argument('--ub_l', nargs='+', type=float_or_none, default=[None], help='upper bounds')
@@ -73,6 +74,17 @@ def callbackF(x):
 if __name__ == '__main__':
     config, _ = get_config()
     config.version += '_' + time.strftime("%Y%m%dT%H%M")
+    # for consistency
+    if len(config.init_beta_l) != len(config.vars_l):
+        config.init_beta_l = [0.1 for _ in range(len(config.vars_l))]
+        config.lb_l = [None for _ in range(len(config.vars_l))]
+        config.ub_l = [None for _ in range(len(config.vars_l))]
+    if len(config.init_beta_g) != len(config.vars_g):
+        n_lack = len(config.vars_g) - len(config.init_beta_g)
+        config.init_beta_g += [0. for _ in range(n_lack)]
+        config.lb_g += [None for _ in range(n_lack)]
+        config.ub_g += [None for _ in range(n_lack)]
+
     timer = Timer()
     _ = timer.stop()
 
@@ -90,6 +102,7 @@ if __name__ == '__main__':
     link_data['carstlen'] = link_data['carst'] * link_data['length']
     # landscape features
     link_data['greenlen'] = link_data['vegetation'] * link_data['length']
+    link_data['skylen'] = link_data['sky'] * link_data['length']
     features = link_data
 
     # %%
@@ -117,17 +130,15 @@ if __name__ == '__main__':
     # g.links.shape
     # g.edges.shape
 
+    # %%
     if config.prism:
-        # %%
         detour_df = analyze_detour_rate(g, obs)
         # detour_df['detour_rate'].describe()
         # detour_df.plot.scatter('min_step', 'obs_step')
 
-        # %%
         g.define_T_from_obs(detour_df)
         print(f"T = {g.T}")
 
-        # %%
         timer.start()
         g.get_state_networks(method=config.state_key, parallel=True)
         snet_time = timer.stop()
@@ -231,12 +242,62 @@ if __name__ == '__main__':
             # %%
             try:
                 # %%
-                print(f"RL model estimation for sample {i}...")
+                # print(f"RL model estimation for sample {i}...")
+                # timer.start()
+                # results_rl = rl.estimate(observations=train_obs, method='L-BFGS-B', disp=False, hess='res')
+                # rl_time = timer.stop()
+                # print(f"estimation time is {rl_time}s.")
+                # rl.print_results(results_rl[0], results_rl[2], results_rl[3], LL0_rl)
+
+                # %%
+                def f(x):
+                    # compute probability
+                    rl.eval_prob(x)
+                    # calculate log-likelihood
+                    LL = 0.
+                    for key_, paths in train_obs.items():
+                        p = rl.p[key_]
+                        max_len, N = paths.shape
+                        Lk = np.zeros(N, dtype=np.float)
+                        for j in range(max_len - 1):
+                            L = np.array(p[paths[j], paths[j+1]])[0]
+                            assert (L > 0 ).all(), f'L includes zeros: key_={key_}, j={j}, pathj={paths[j]}, pathj+1={paths[j+1]}'
+                            Lk += np.log(L)
+                        LL += np.sum(Lk)
+                    return -LL
+
+                # %%
+                # estimation
+                Niter = 1
                 timer.start()
-                results_rl = rl.estimate(observations=train_obs, method='L-BFGS-B', disp=False, hess='res')
+                # myfactr = 1e-10
+                results_rl = minimize_parallel(f, x0=rl.beta, bounds=rl.bounds,
+                        options={'disp':False, 'ftol': 1e2 * np.finfo(float).eps, 'gtol': 1e-10 * np.finfo(float).eps, 'maxiter':100}, callback=callbackF) #, parallel={'max_workers':4, 'verbose': True}
                 rl_time = timer.stop()
                 print(f"estimation time is {rl_time}s.")
-                rl.print_results(results_rl[0], results_rl[2], results_rl[3], LL0_rl)
+                rl.beta = results_rl.x
+                cov_matrix = results_rl.hess_inv if type(results_rl.hess_inv) == np.ndarray else results_rl.hess_inv.todense()
+                stderr = np.sqrt(np.diag(cov_matrix))
+                t_val = results_rl.x / stderr
+                if config.estimate_mu:
+                    t_val[-1] = (results_rl.x[-1] - 1) / stderr[-1]
+                rl.print_results(results_rl, stderr, t_val, LL0_rl)
+
+                # # %%
+                # import scipy
+                # scipy.optimize.approx_fprime(rl.beta, f, epsilon=1e-6)
+                
+                # print('calculate gradient...')
+                # hessian = []
+                # grad_fn = grad(f)
+                # grads = grad_fn(rl.beta)
+                # print(grads)
+                # grads_sq = grads[0].squeeze()
+                # for grad in grads_sq:
+                #     hess = autograd.grad(grad, layer.parameters(), retain_graph=True)
+                #     hess = hess[0].squeeze()
+                #     hessian.append(hess)
+
                 # %%
                 if config.test_ratio > 0:
                     # validation
@@ -247,7 +308,8 @@ if __name__ == '__main__':
                     LL_val_rl = 0.
                 # %%
                 # record results
-                record_res(i, 'RL', results_rl[0], results_rl[2], results_rl[3], LL0_rl, LL_val_rl, rl_time, init_beta)
+                # record_res(i, 'RL', results_rl[0], results_rl[2], results_rl[3], LL0_rl, LL_val_rl, rl_time, init_beta)
+                record_res(i, 'RL', results_rl, stderr, t_val, LL0_rl, LL_val_rl, rl_time, init_beta)
             except:
                 print(f"RL is not feasible for sample {i}; param. values = {rl.beta}")
 
@@ -332,10 +394,10 @@ if __name__ == '__main__':
         print(df_rl)
         if config.test_ratio > 0:
             # for validation
-            df_rl.to_csv(f'results/pp_application/{network_}/validation/RL_{config.version}.csv', index=True)
+            df_rl.to_csv(f'results/{network_}/validation/RL_{config.version}.csv', index=True)
         else:
             # for estimation
-            df_rl.T.to_csv(f'results/pp_application/{network_}/estimation/RL_{config.version}.csv', index=True)
+            df_rl.T.to_csv(f'results/{network_}/estimation/RL_{config.version}.csv', index=True)
     if config.prism:
         df_prism = pd.DataFrame(outputs['PrismRL']).T
         print(df_prism)
@@ -348,7 +410,7 @@ if __name__ == '__main__':
 
     # %%
     # write config file
-    dir_ = f'results/pp_application/{network_}/'
+    dir_ = f'results/{network_}/'
     dir_ = dir_ + 'validation/' if config.test_ratio > 0 else dir_ + 'estimation/'
     with open(f"{dir_}{config.version}.json", mode="w") as f:
         json.dump(config.__dict__, f, indent=4)

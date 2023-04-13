@@ -45,20 +45,28 @@ class RL(object):
         self.bounds = []
         self.fixed_v = np.zeros(len(graph.edges), dtype=np.float)
         self.fixed_v_link = np.zeros(len(graph.links), dtype=np.float)
-        for name, init_val, lower, upper, var_name, to_estimate in betas:
+        # self.features = []
+        # self.f_idxs = {'g_link': [], 'g_edge': [], 'l_link': [], 'l_edge': []}
+        for k, (name, init_val, lower, upper, var_name, to_estimate) in enumerate(betas):
+            f, var_type, is_local = features[var_name]
             if to_estimate == 0:
                 self.beta.append(init_val)
                 self.freebetaNames.append(name)
                 self.bounds.append((lower, upper))
                 self.x.append(features[var_name])
+                # self.features.append(f)
+                # if is_local == 0:
+                #     self.f_idxs[f'g_{var_type}'].append(k)
+                # else:
+                #     self.f_idxs[f'l_{var_type}'].append(k)
             else:
-                f, var_type, is_local = features[var_name]
                 assert is_local == 0, 'fixed parameter for local variable is not yet implemented'
                 if var_type == 'link':
                     self.fixed_v += init_val * f[graph.receivers]
                     self.fixed_v_link += init_val * f
                 elif var_type == 'edge':
                     self.fixed_v += init_val * f
+        # self.features = np.vstack(self.features).T
         # when estimating mu_global
         # this does not effect on eval_z if it is placed at tail (due to zip iteration)
         if self.estimate_mu:
@@ -175,8 +183,8 @@ class RL(object):
 
         # update v by dummy edges
         dlinks = self.graph.dummy_backward_stars[d]
-        vd = np.concatenate([v, np.zeros(len(dlinks))], axis=0)
-        vd_local = np.concatenate([v_local, np.zeros(len(dlinks))], axis=0)
+        vd = np.concatenate([v, np.zeros(len(dlinks), dtype=np.float)], axis=0)
+        vd_local = np.concatenate([v_local, np.zeros(len(dlinks), dtype=np.float)], axis=0)
         add_edges = [(dlink, L) for dlink in dlinks]
         edges = np.concatenate([self.graph.edges, add_edges], axis=0)
         senders, receivers = edges[:,0], edges[:,1]
@@ -189,11 +197,16 @@ class RL(object):
         # compute the probtbility
         logit = np.exp((vd + vd_local)/self.mu) * (senders != L) *\
                     (z[receivers] ** (self.mu_g/self.mu))
-        W = csr_matrix(
-            (logit, (senders, receivers)), shape=(L+1,L+1)
-        )
-        deno = W.toarray().sum(axis=1)
+        deno = np.zeros((L+1,), dtype=np.float)
+        np.add.at(deno, senders, logit)
+        # W = csr_matrix(
+        #     (logit, (senders, receivers)), shape=(L+1,L+1)
+        # )
+        # deno = W.toarray().sum(axis=1)
         p_pair = logit / deno[senders] # L+1 x 1
+        # p = np.zeros((L+1, L+1), dtype=np.float)
+        # p[senders, receivers] = p_pair
+        # p[L,L] = 1.
         p = csr_matrix(
                         (np.append(p_pair, [1.0]),
                             (np.append(senders, [L]), np.append(receivers, [L]))
@@ -214,7 +227,18 @@ class RL(object):
         return z, exp_v
 
     def _eval_v(self, beta):
-        # weight vector of size L x 1
+        # # weight vectors: g_link, g_edge, l_link, l_edge
+        # if len(self.f_idxs['g_link']) > 0:
+        #     v = self.fixed_v + self.features[:,self.f_idxs['g_link']][self.graph.receivers] @ beta[self.f_idxs['g_link']]
+        #     v_link = self.fixed_v_link + self.features[:,self.f_idxs['g_link']] @ beta[self.f_idxs['g_link']]
+        # if len(self.f_idxs['g_edge']) > 0:
+        #     v += self.features[:,self.f_idxs['g_edge']] @ beta[self.f_idxs['g_edge']]
+        # if len(self.f_idxs['l_link']) > 0:
+        #     v_local = self.features[:,self.f_idxs['l_link']][self.graph.receivers] @ beta[self.f_idxs['l_link']]
+        #     v_local_link = self.features[:,self.f_idxs['l_link']] @ beta[self.f_idxs['l_link']]
+        # if len(self.f_idxs['l_edge']) > 0:
+        #     v_local += self.features[:,self.f_idxs['l_edge']] @ beta[self.f_idxs['l_edge']]
+
         v = self.fixed_v.copy()
         v_link = self.fixed_v_link.copy()
         v_local = np.zeros_like(self.fixed_v)

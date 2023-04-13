@@ -34,9 +34,8 @@ class Graph(object):
         # edge (link pair) data
         self.edges = []
         for k, (ki, kj) in enumerate(link_nodes):
-            for a, (ai, aj) in enumerate(link_nodes):
-                if kj == ai:
-                    self.edges.append((k,a))
+            As = np.where(kj == link_nodes[:,0])[0]
+            for a in As: self.edges.append((k,a))
         self.edges = np.array(self.edges)
         self.senders = self.edges[:,0]
         self.receivers = self.edges[:,1]
