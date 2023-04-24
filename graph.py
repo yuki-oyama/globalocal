@@ -51,18 +51,20 @@ class Graph(object):
         self.edge_features = {}
 
         # od data
-        self.origins = []
-        self.dests = []
         if od_data is not None:
-            self.ods = []
-            for od_idx in od_data.index:
-                o_node, d_node = od_data.loc[od_idx, ['origin', 'destination']]
-                if o_node == d_node:
-                    continue
-                self.ods.append((o_node, d_node))
-                if o_node not in self.origins: self.origins.append(o_node)
-                if d_node not in self.dests: self.dests.append(d_node)
-        self.ods = np.array(self.ods)
+            self.origins = od_data['origin'].unique()
+            self.dests = od_data['destination'].unique()
+            self.ods = od_data[['origin', 'destination']].values
+        # if od_data is not None:
+        #     self.ods = []
+        #     for od_idx in od_data.index:
+        #         o_node, d_node = od_data.loc[od_idx, ['origin', 'destination']]
+        #         if o_node == d_node:
+        #             continue
+        #         self.ods.append((o_node, d_node))
+        #         if o_node not in self.origins: self.origins.append(o_node)
+        #         if d_node not in self.dests: self.dests.append(d_node)
+        # self.ods = np.array(self.ods)
         # self.d_ods = {d:[] for d in self.dests}
         # for m, (o, d) for enumerate(self.ods): self.d_ods[d].append(m)
 

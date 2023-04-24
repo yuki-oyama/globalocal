@@ -226,6 +226,25 @@ class RL(object):
         z = splinalg.spsolve((I - M), b)    # L+1 x 1
         return z, exp_v
 
+    def _eval_z_vi(self, vd, senders, receivers):
+        # weight matrix of size N x N
+        L = len(self.graph.links)
+        exp_v = np.exp(vd / self.mu_g) * (senders != L) # E x 1
+        M = csr_matrix((exp_v, (senders, receivers)), shape=(L+1,L+1)) # L+1 x L+1
+        b = np.zeros((L+1,), dtype=np.float) # L+1 x 1
+        b[L] = 1.
+        z = np.ones((L+1,), dtype=np.float) # L+1 x 1
+        t = 0
+        while True:
+            t += 1
+            zt = M @ z + b
+            dif = np.linalg.norm(zt - z)
+            if dif < 1e-20 or t == 100:
+                z = zt
+                break
+            z = zt
+        return z, exp_v
+
     def _eval_v(self, beta):
         # # weight vectors: g_link, g_edge, l_link, l_edge
         # if len(self.f_idxs['g_link']) > 0:

@@ -1,0 +1,44 @@
+{
+    "rl": true,
+    "prism": false,
+    "parallel": false,
+    "version": "Global_sidewalk_20230424T1913",
+    "state_key": "d",
+    "T": 15,
+    "uturn": true,
+    "uturn_penalty": -20.0,
+    "min_n": 0,
+    "mu_g": 1.0,
+    "vars_g": [
+        "length",
+        "crosswalk",
+        "greenlen",
+        "sidewalklen"
+    ],
+    "init_beta_g": [
+        -0.3,
+        -0.8,
+        0.2,
+        0.05
+    ],
+    "lb_g": [
+        null,
+        null,
+        null,
+        null
+    ],
+    "ub_g": [
+        0.0,
+        0.0,
+        null,
+        null
+    ],
+    "vars_l": [],
+    "init_beta_l": [],
+    "lb_l": [],
+    "ub_l": [],
+    "estimate_mu": false,
+    "n_samples": 1,
+    "test_ratio": 0.0,
+    "isBootstrap": false
+}

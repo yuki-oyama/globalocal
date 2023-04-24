@@ -1,0 +1,46 @@
+{
+    "rl": true,
+    "prism": false,
+    "parallel": false,
+    "version": "Local_w_mu_BS_20230424T1800",
+    "state_key": "d",
+    "T": 15,
+    "uturn": true,
+    "uturn_penalty": -20.0,
+    "min_n": 0,
+    "mu_g": 1.0,
+    "vars_g": [
+        "length",
+        "crosswalk"
+    ],
+    "init_beta_g": [
+        -0.3,
+        -0.9
+    ],
+    "lb_g": [
+        null,
+        null,
+        null
+    ],
+    "ub_g": [
+        0.0,
+        0.0,
+        null
+    ],
+    "vars_l": [
+        "vegetation"
+    ],
+    "init_beta_l": [
+        3.3
+    ],
+    "lb_l": [
+        null
+    ],
+    "ub_l": [
+        null
+    ],
+    "estimate_mu": true,
+    "n_samples": 150,
+    "test_ratio": 0.0,
+    "isBootstrap": true
+}

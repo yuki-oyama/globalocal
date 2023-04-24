@@ -40,23 +40,24 @@ model_arg.add_argument('--state_key', type=str, default='d', help='od or d')
 model_arg.add_argument('--T', type=int, default=15, help='time constraint')
 model_arg.add_argument('--uturn', type=str2bool, default=True, help='if add uturn dummy or not')
 model_arg.add_argument('--uturn_penalty', type=float, default=-20., help='penalty for uturn')
-model_arg.add_argument('--min_n', type=int, default=8, help='minimum number observed for d')
+model_arg.add_argument('--min_n', type=int, default=0, help='minimum number observed for d')
 
 # parameters
 model_arg.add_argument('--mu_g', type=float, default=1., help='scale for global utility')
 model_arg.add_argument('--vars_g', nargs='+', type=str, default=['length', 'crosswalk', 'greenlen'], help='explanatory variables')
-model_arg.add_argument('--init_beta_g', nargs='+', type=float, default=[-0.3,-0.9, 0.2], help='initial parameter values')
+model_arg.add_argument('--init_beta_g', nargs='+', type=float, default=[-1.,-1.,0.01], help='initial parameter values')
 model_arg.add_argument('--lb_g', nargs='+', type=float_or_none, default=[None,None,None], help='lower bounds')
-model_arg.add_argument('--ub_g', nargs='+', type=float_or_none, default=[0.,0.,0.], help='upper bounds')
-model_arg.add_argument('--vars_l', nargs='+', type=str, default=['vegetation'], help='explanatory variables')
-model_arg.add_argument('--init_beta_l', nargs='+', type=float, default=[0.1], help='initial parameter values')
-model_arg.add_argument('--lb_l', nargs='+', type=float_or_none, default=[None], help='lower bounds')
-model_arg.add_argument('--ub_l', nargs='+', type=float_or_none, default=[None], help='upper bounds')
+model_arg.add_argument('--ub_g', nargs='+', type=float_or_none, default=[0.,0.,None], help='upper bounds')
+model_arg.add_argument('--vars_l', nargs='+', type=str, default=[], help='explanatory variables')
+model_arg.add_argument('--init_beta_l', nargs='+', type=float, default=[], help='initial parameter values')
+model_arg.add_argument('--lb_l', nargs='+', type=float_or_none, default=[], help='lower bounds')
+model_arg.add_argument('--ub_l', nargs='+', type=float_or_none, default=[], help='upper bounds')
 model_arg.add_argument('--estimate_mu', type=str2bool, default=False, help='if estimate mu_g or not')
 
 # Validation
 model_arg.add_argument('--n_samples', type=int, default=1, help='number of samples')
-model_arg.add_argument('--test_ratio', type=float, default=0, help='ratio of test samples')
+model_arg.add_argument('--test_ratio', type=float, default=0., help='ratio of test samples')
+model_arg.add_argument('--isBootstrap', type=str2bool, default=False, help='if bootstrapping or not')
 
 def get_config():
   config, unparsed = parser.parse_known_args()
@@ -75,13 +76,17 @@ if __name__ == '__main__':
     config, _ = get_config()
     config.version += '_' + time.strftime("%Y%m%dT%H%M")
     # for consistency
-    if len(config.init_beta_l) != len(config.vars_l):
-        config.init_beta_l = [0.1 for _ in range(len(config.vars_l))]
-        config.lb_l = [None for _ in range(len(config.vars_l))]
-        config.ub_l = [None for _ in range(len(config.vars_l))]
-    if len(config.init_beta_g) != len(config.vars_g):
-        n_lack = len(config.vars_g) - len(config.init_beta_g)
-        config.init_beta_g += [0. for _ in range(n_lack)]
+    init_beta_l = [0. for _ in range(len(config.vars_l))]
+    config.lb_l = [None for _ in range(len(config.vars_l))]
+    config.ub_l = [None for _ in range(len(config.vars_l))]
+    for l, init_val in enumerate(config.init_beta_l):
+        init_beta_l[l] = init_val
+    config.init_beta_l = init_beta_l
+
+    if len(config.lb_g) != len(config.vars_g):
+        n_lack = len(config.vars_g) - len(config.lb_g)
+        if len(config.init_beta_g) < len(config.vars_g):
+            config.init_beta_g += [0. for _ in range(n_lack)]
         config.lb_g += [None for _ in range(n_lack)]
         config.ub_g += [None for _ in range(n_lack)]
 
@@ -97,8 +102,8 @@ if __name__ == '__main__':
 
     # add negative var of street without sidewalk
     link_data['length'] /= 10
-    link_data['carst'] = (link_data['walkwidth'] == 0) * 1 * (link_data['crosswalk'] == 0) * 1
-    link_data['sidewalklen'] = link_data['walkwidth'] * link_data['length']
+    link_data['carst'] = (link_data['walkwidth2'] == 0) * 1 * (link_data['crosswalk'] == 0) * 1
+    link_data['sidewalklen'] = link_data['walkwidth2']/10 * link_data['length']
     link_data['carstlen'] = link_data['carst'] * link_data['length']
     # landscape features
     link_data['greenlen'] = link_data['vegetation'] * link_data['length']
@@ -111,7 +116,7 @@ if __name__ == '__main__':
 
     # %%
     dests, obs, obs_filled, n_paths, max_len, od_data, samples = read_mm_results(
-        obs_data, links, min_n_paths=config.min_n, n_samples=config.n_samples, test_ratio=config.test_ratio, seed_=111)
+        obs_data, links, min_n_paths=config.min_n, n_samples=config.n_samples, test_ratio=config.test_ratio, seed_=111, isBootstrap=config.isBootstrap)
 
     # %%
     # number of paths
@@ -216,7 +221,12 @@ if __name__ == '__main__':
                 'mu_g': models.get(model_type).mu_g,
             })
 
+    if config.estimate_mu: init_beta += [1.]
+    n_success = 0
     for i, sample in enumerate(samples):
+        if n_success >= 100:
+            break
+
         train_obs = sample['train']
         test_obs = sample['test']
         # if config.min_n > 0:
@@ -226,15 +236,14 @@ if __name__ == '__main__':
         # %%
         if config.rl:
             # fixed mu_g
-            if not config.estimate_mu and config.n_samples > 1 and config.test_ratio == 0:
-                rl.mu_g = config.mu_g - 0.1 * i
+            # if not config.estimate_mu and config.n_samples > 1 and config.test_ratio == 0:
+            #     rl.mu_g = config.mu_g - 0.1 * i
 
             # %%
             # only observed destinations in samples
             rl.partitions = list(train_obs.keys())
 
             # %%
-            if config.estimate_mu: init_beta += [1.]
             rl.beta = np.array(init_beta)
             LL0_rl = rl.calc_likelihood(observations=train_obs)
             print('RL model initial log likelihood:', LL0_rl)
@@ -270,12 +279,16 @@ if __name__ == '__main__':
                 # estimation
                 Niter = 1
                 timer.start()
-                # myfactr = 1e-10
+                # myfactr = 1e-10: for tolerance, add ", 'ftol': 1e-2 * np.finfo(float).eps, 'gtol': 1e-20 * np.finfo(float).eps"
                 results_rl = minimize_parallel(f, x0=rl.beta, bounds=rl.bounds,
-                        options={'disp':False, 'ftol': 1e2 * np.finfo(float).eps, 'gtol': 1e-10 * np.finfo(float).eps, 'maxiter':100}, callback=callbackF) #, parallel={'max_workers':4, 'verbose': True}
+                        options={'disp':False, 'maxiter':100}, callback=callbackF) #, parallel={'max_workers':4, 'verbose': True}
                 rl_time = timer.stop()
                 print(f"estimation time is {rl_time}s.")
                 rl.beta = results_rl.x
+                # calculate hessian
+                # hess_fn = Hessian(f)
+                # hess = hess_fn(rl.beta)
+                # cov_matrix = np.linalg.inv(hess)
                 cov_matrix = results_rl.hess_inv if type(results_rl.hess_inv) == np.ndarray else results_rl.hess_inv.todense()
                 stderr = np.sqrt(np.diag(cov_matrix))
                 t_val = results_rl.x / stderr
@@ -286,7 +299,7 @@ if __name__ == '__main__':
                 # # %%
                 # import scipy
                 # scipy.optimize.approx_fprime(rl.beta, f, epsilon=1e-6)
-                
+
                 # print('calculate gradient...')
                 # hessian = []
                 # grad_fn = grad(f)
@@ -310,6 +323,8 @@ if __name__ == '__main__':
                 # record results
                 # record_res(i, 'RL', results_rl[0], results_rl[2], results_rl[3], LL0_rl, LL_val_rl, rl_time, init_beta)
                 record_res(i, 'RL', results_rl, stderr, t_val, LL0_rl, LL_val_rl, rl_time, init_beta)
+                n_success += 1
+                print(f"RL was successfully estimated for sample {i}, and so far {n_success}; param. values = {rl.beta}")
             except:
                 print(f"RL is not feasible for sample {i}; param. values = {rl.beta}")
 

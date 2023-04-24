@@ -54,7 +54,8 @@ def reset_index(link_data, node_data, obs_data):
     else:
         return None
 
-def read_mm_results(obs_df, links, min_n_paths=1, n_samples=1, test_ratio=0., seed_=111):
+def read_mm_results(obs_df, links, min_n_paths=1, n_samples=1,
+                    test_ratio=0., seed_=111, isBootstrap=False):
     """reading map matching results and obtain samples
     Arguments:
         obs_df (pd.DataFrame): map matching 'link' file
@@ -91,10 +92,10 @@ def read_mm_results(obs_df, links, min_n_paths=1, n_samples=1, test_ratio=0., se
                 n_paths += 1
                 if len(path) > max_len: max_len = len(path)
             # renew path
-            path = [link['link_id']]
+            path = [int(link['link_id'])]
             path_len = link['link_length']
         else:
-            path.append(link['link_id'])
+            path.append(int(link['link_id']))
             path_len += link['link_length']
         trip_id = link['trip_id']
 
@@ -124,13 +125,24 @@ def read_mm_results(obs_df, links, min_n_paths=1, n_samples=1, test_ratio=0., se
     rawdf = pd.DataFrame({'d': obs_for_sampling[0], 'path': obs_for_sampling[1]})
     samples = []
     for i in range(n_samples):
-        train_df = rawdf.sample(frac=(1-test_ratio), random_state=seed_+i)
-        test_df = rawdf.drop(train_df.index)
-        if i == 0: print(f'n_trains is {len(train_df)}; n_tests is {len(test_df)}')
-        sample = {
-            'train': {d: np.array([path for path in train_df.query(f'd == {d}')['path']]).T for d in train_df['d'].unique()},
-            'test': {d: np.array([path for path in test_df.query(f'd == {d}')['path']]).T for d in test_df['d'].unique()},
-        }
+        if not isBootstrap:
+            train_df = rawdf.sample(frac=(1-test_ratio), random_state=seed_+i)
+            test_df = rawdf.drop(train_df.index)
+            if i == 0: print(f'n_trains is {len(train_df)}; n_tests is {len(test_df)}')
+            sample = {
+                'train': {d: np.array([path for path in train_df.query(f'd == {d}')['path']]).T for d in train_df['d'].unique()},
+                'test': {d: np.array([path for path in test_df.query(f'd == {d}')['path']]).T for d in test_df['d'].unique()},
+            }
+        else:
+            if i == 0:
+                train_df = rawdf.copy() # the first sample is the original sample
+                print(f'n_trains is {len(train_df)}; n_tests is {0}')
+            else:
+                train_df = rawdf.sample(frac=(1-test_ratio), random_state=seed_+i, replace=True)
+            sample = {
+                'train': {d: np.array([path for path in train_df.query(f'd == {d}')['path']]).T for d in train_df['d'].unique()},
+                'test': None
+            }
         samples.append(sample)
 
     # od data
@@ -161,3 +173,21 @@ def analyze_detour_rate(g, obs):
         )
     detour_df['detour_rate'] = detour_df['obs_step']/detour_df['min_step']
     return detour_df
+
+def bootstrap_samples(obs_filled, n_samples, seed_=111):
+    obs_for_sampling = [[], []] # for bootstrapping
+    for d, paths in obs_filled.items():
+        for path in paths.T:
+            obs_for_sampling[0].append(d)
+            obs_for_sampling[1].append(path)
+
+    # sampling
+    rawdf = pd.DataFrame({'d': obs_for_sampling[0], 'path': obs_for_sampling[1]})
+    samples = []
+    for i in range(n_samples):
+        sample_df = rawdf.sample(frac=1, random_state=seed_+i, replace=True)
+        sample = {
+            d: np.array([path for path in sample_df.query(f'd == {d}')['path']]).T for d in sample_df['d'].unique()
+        }
+        samples.append(sample)
+    return samples
