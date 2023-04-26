@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 
 # %%
-file_path = 'results/kannai/estimation/Local_w_mu_BS_20230424T1800.csv'
+file_path = 'results/kannai/estimation/GlobaLocal_w_m_BS_20230425T1703.csv'
 df = pd.read_csv(file_path, index_col=0)
 df = df.T
 df = df.dropna(how='any', axis=0)
