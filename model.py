@@ -90,13 +90,34 @@ class RL(object):
         # partitions: destinations for RL
         self.partitions = graph.dests
 
-    def sample_path(self, os, d, sample_size, max_len=False):
+    def assign_flows(self, ods):
+        """network loading by using probability
+        ods (dict): {d:{o:flow}}
+        """
+        L = len(self.graph.links)
+        I = sp.identity(L+1)
+        x = np.zeros(L, dtype=np.float)
+        for d, qods in ods.items():
+            qd = csr_matrix(
+                (list(qods.values()), (list(qods.keys()), np.zeros(len(qods)))),
+                shape=(L+1, 1)
+                )
+            # solve the system of linear equations
+            xd = splinalg.spsolve((I - self.p[d].T), qd)    # L+1 x 1
+            x += xd.toarray().squeeze()
+        return x
+
+    def sample_path(self, os, d, sample_size, max_len=False, origin='link'):
         p = self.p[d]
         # init nodes
         seq0 = []
         for o in os:
-            olinks = self.graph.dummy_forward_stars[o]
-            seq0 += [np.random.choice(olinks) for _ in range(sample_size)]
+            if origin == 'node':
+                olinks = self.graph.dummy_forward_stars[o]
+                seq0 += [np.random.choice(olinks) for _ in range(sample_size)]
+            elif origin == 'link':
+                seq0 += [o for _ in range(sample_size)]
+
         # sampling
         seq = [seq0]
         while True:
