@@ -7,18 +7,18 @@ import matplotlib.pyplot as plt
 # validation results
 dir_ = 'results/kannai/validation/'
 model_files = [
-    'Global_m_20230426T1240.csv',
-    'Local_wo_m_greenlen_20230426T1209.csv',
+    # 'Global_m_20230426T1240.csv',
+    # 'Local_wo_m_greenlen_20230426T1209.csv',
     # 'Local_w_m_greenlen_20230426T1209.csv',
     'GlobaLocal_wo_m_greenlen_20230426T1208.csv',
-    # 'GlobaLocal_w_m_greenlen_20230426T1208.csv'
+    'GlobaLocal_w_m_greenlen_20230426T1208.csv'
 ]
 model_names = [
-    'Global',
-    'Local_wo_mu',
+    # 'Global',
+    # 'Local_wo_mu',
     # 'Local_w_mu',
     'GlobalLocal_wo_mu',
-    # 'GlobalLocal_w_mu'
+    'GlobalLocal_w_mu'
 ]
 
 # %%
@@ -37,6 +37,7 @@ df = df.dropna(how='any', axis=0) # drop samples for which nan results are produ
 dflen = 20 if len(df) >= 20 else 10
 df = df[:dflen]
 print(df)
+df['GlobalLocal_wo_mu_LV'] > df['GlobalLocal_w_mu_LV']
 
 # %%
 x = np.arange(dflen) + 1
