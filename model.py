@@ -26,11 +26,12 @@ class RL(object):
                 mu_g=1.,
                 parallel=False,
                 print_process=False,
-                estimate_mu=False
+                estimate_mu=False,
+                gamma=1.
                 ):
 
         # setting
-        self.model_type = 'rl'
+        self.model_type = 'rl' if gamma == 1 else 'drl'
         self.eps = 1e-8
         self.inf = 1e+10
         self.parallel = parallel
@@ -79,6 +80,7 @@ class RL(object):
         # parameters
         self.mu = mu
         self.mu_g = mu_g
+        self.gamma = gamma
 
         # probtbility
         self.p_pair = {}    # |OD| x E x 1
@@ -211,13 +213,16 @@ class RL(object):
         senders, receivers = edges[:,0], edges[:,1]
 
         # compute z
-        z, exp_v = self._eval_z(vd, senders, receivers)
+        if self.model_type == 'rl':
+            z, exp_v = self._eval_z(vd, senders, receivers)
+        elif self.model_type == 'drl':
+            z, exp_v = self._eval_z_vi(vd, senders, receivers)
         assert np.min(z) > 0., 'z includes zeros or negative values!!: beta={}, d={}, z={}'.format(self.beta, d, z)
         self.z[d] = z
 
         # compute the probtbility
         logit = np.exp((vd + vd_local)/self.mu) * (senders != L) *\
-                    (z[receivers] ** (self.mu_g/self.mu))
+                    (z[receivers] ** (self.gamma * self.mu_g/self.mu))
         deno = np.zeros((L+1,), dtype=np.float)
         np.add.at(deno, senders, logit)
         # W = csr_matrix(
@@ -253,14 +258,15 @@ class RL(object):
         exp_v = np.exp(vd / self.mu_g) * (senders != L) # E x 1
         M = csr_matrix((exp_v, (senders, receivers)), shape=(L+1,L+1)) # L+1 x L+1
         b = np.zeros((L+1,), dtype=np.float) # L+1 x 1
-        b[L] = 1.
         z = np.ones((L+1,), dtype=np.float) # L+1 x 1
+        b[L] = 1.
+        z[L] = 1.
         t = 0
         while True:
             t += 1
-            zt = M @ z + b
+            zt = M @ (z ** self.gamma) + b
             dif = np.linalg.norm(zt - z)
-            if dif < 1e-20 or t == 100:
+            if dif < 1e-30 or t == 100:
                 z = zt
                 break
             z = zt
@@ -433,6 +439,7 @@ class RL(object):
         print(f'Final log likelihood: {-res.fun:.3f}')
         print(f'Adjusted rho-squared: {1-(-res.fun-len(res.x))/(L0):.2f}')
         print(f'AIC: {2*res.fun + 2*len(res.x):.3f}')
+
 
 class PrismRL(RL):
 

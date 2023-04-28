@@ -53,6 +53,7 @@ model_arg.add_argument('--init_beta_l', nargs='+', type=float, default=[], help=
 model_arg.add_argument('--lb_l', nargs='+', type=float_or_none, default=[], help='lower bounds')
 model_arg.add_argument('--ub_l', nargs='+', type=float_or_none, default=[], help='upper bounds')
 model_arg.add_argument('--estimate_mu', type=str2bool, default=False, help='if estimate mu_g or not')
+model_arg.add_argument('--gamma', type=float, default=1., help='discount factor')
 
 # Validation
 model_arg.add_argument('--n_samples', type=int, default=1, help='number of samples')
@@ -187,7 +188,7 @@ if __name__ == '__main__':
     # %%
     models = {}
     if config.rl:
-        rl = RL(g, xs, betas, mu=1., mu_g=config.mu_g, estimate_mu=config.estimate_mu)
+        rl = RL(g, xs, betas, mu=1., mu_g=config.mu_g, estimate_mu=config.estimate_mu, gamma=config.gamma)
         models['RL'] = rl
     if config.prism:
         prism = PrismRL(g, xs, betas, mu=1., mu_g=config.mu_g, method=config.state_key, estimate_mu=config.estimate_mu)
@@ -205,6 +206,7 @@ if __name__ == '__main__':
             'LL': -res.fun,
             'Lv': L_val,
             'runtime': runtime,
+            'gamma': config.gamma
         }
         Vg = len(config.vars_g)
         for var_name, b, s, t, b0 in zip(var_names, res.x, stderr, t_val, init_beta):
@@ -224,7 +226,7 @@ if __name__ == '__main__':
     if config.estimate_mu: init_beta += [1.]
     n_success = 0
     for i, sample in enumerate(samples):
-        if n_success >= 100:
+        if n_success >= 100 and config.isBootstrap:
             break
 
         train_obs = sample['train']
@@ -407,12 +409,13 @@ if __name__ == '__main__':
     if config.rl:
         df_rl = pd.DataFrame(outputs['RL']).T
         print(df_rl)
+        model_type = 'RL' if config.gamma == 1 else f'DRL{config.gamma}'
         if config.test_ratio > 0:
             # for validation
-            df_rl.to_csv(f'results/{network_}/validation/RL_{config.version}.csv', index=True)
+            df_rl.to_csv(f'results/{network_}/validation/{model_type}_{config.version}.csv', index=True)
         else:
             # for estimation
-            df_rl.T.to_csv(f'results/{network_}/estimation/RL_{config.version}.csv', index=True)
+            df_rl.T.to_csv(f'results/{network_}/estimation/{model_type}_{config.version}.csv', index=True)
     if config.prism:
         df_prism = pd.DataFrame(outputs['PrismRL']).T
         print(df_prism)
