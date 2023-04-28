@@ -60,8 +60,10 @@ green_scenarios = {
 # %%
 # models
 df_G = pd.read_csv('results/kannai/estimation/20230425_sidewalk_bootstrapping/Global_BS_20230424T1921.csv', index_col=0).T
+df_dG = pd.read_csv('results/kannai/estimation/20230428_discounted_RL_bootstrapping/DRL0.99_Global_20230428T1512.csv', index_col=0).T
 df_L = pd.read_csv('results/kannai/estimation/20230425_sidewalk_bootstrapping/Local_wo_mu_greenlen_BS_20230425T1153.csv', index_col=0).T
 df_Lm = pd.read_csv('results/kannai/estimation/20230425_sidewalk_bootstrapping/Local_w_m_greenlen_BS_20230425T1251.csv', index_col=0).T
+df_dL = pd.read_csv('results/kannai/estimation/20230428_discounted_RL_bootstrapping/DRL0.99_Local_wo_m_greenlen_20230428T1510.csv', index_col=0).T
 
 # %%
 # true parameters & probtbility
@@ -70,6 +72,13 @@ beta_g = [
     ('b_cross', df_G['beta_crosswalk_g'].values[0], None, None, 'crosswalk', 0),
     ('b_sidewalk', df_G['beta_sidewalklen_g'].values[0], None, None, 'sidewalklen', 0),
     ('b_green', df_G['beta_greenlen_g'].values[0], None, None, 'greenlen', 0),
+    ('b_uturn', -20., None, None, 'uturn', 1)
+]
+beta_dg = [
+    ('b_len', df_dG['beta_length_g'].values[0], None, None, 'length', 0),
+    ('b_cross', df_dG['beta_crosswalk_g'].values[0], None, None, 'crosswalk', 0),
+    ('b_sidewalk', df_dG['beta_sidewalklen_g'].values[0], None, None, 'sidewalklen', 0),
+    ('b_green', df_dG['beta_greenlen_g'].values[0], None, None, 'greenlen', 0),
     ('b_uturn', -20., None, None, 'uturn', 1)
 ]
 beta_l = [
@@ -84,6 +93,13 @@ beta_lm = [
     ('b_cross', df_Lm['beta_crosswalk_g'].values[0], None, None, 'crosswalk', 0),
     ('b_sidewalk', df_Lm['beta_sidewalklen_g'].values[0], None, None, 'sidewalklen', 0),
     ('b_green', df_Lm['beta_greenlen_l'].values[0], None, None, 'greenlen', 0),
+    ('b_uturn', -20., None, None, 'uturn', 1)
+]
+beta_dL = [
+    ('b_len', df_dL['beta_length_g'].values[0], None, None, 'length', 0),
+    ('b_cross', df_dL['beta_crosswalk_g'].values[0], None, None, 'crosswalk', 0),
+    ('b_sidewalk', df_dL['beta_sidewalklen_g'].values[0], None, None, 'sidewalklen', 0),
+    ('b_green', df_dL['beta_greenlen_l'].values[0], None, None, 'greenlen', 0),
     ('b_uturn', -20., None, None, 'uturn', 1)
 ]
 
@@ -121,13 +137,17 @@ for s, green in green_scenarios.items():
     # global model
     model_G = RL(g, features_g, beta_g, mu=1., mu_g=df_G['mu_g'].values[0], estimate_mu=False)
     models[f'modelG_{s}'] = model_G
+    model_dG = RL(g, features_g, beta_dg, mu=1., mu_g=df_dG['mu_g'].values[0], estimate_mu=False, gamma=df_dG['gamma'].values[0])
+    models[f'modeldG_{s}'] = model_dG
     # local model
     features_l = deepcopy(features_g)
     features_l['greenlen'][2] = 1
     model_L = RL(g, features_l, beta_l, mu=1., mu_g=df_L['mu_g'].values[0], estimate_mu=False)
     models[f'modelL_{s}'] = model_L
-    model_Lm = RL(g, features_l, beta_l, mu=1., mu_g=df_Lm['mu_g'].values[0], estimate_mu=False)
-    models[f'modelLm_{s}'] = model_Lm
+    # model_Lm = RL(g, features_l, beta_l, mu=1., mu_g=df_Lm['mu_g'].values[0], estimate_mu=False)
+    # models[f'modelLm_{s}'] = model_Lm
+    model_dL = RL(g, features_l, beta_l, mu=1., mu_g=df_dL['mu_g'].values[0], estimate_mu=False, gamma=df_dL['gamma'].values[0])
+    models[f'modeldL_{s}'] = model_dL
 
 # %%
 N = 500
@@ -142,7 +162,7 @@ for scenario, model in models.items():
     print(scenario)
     model.eval_prob()
     # sampling
-    seq = model.sample_path(os, d, N, origin='link')
+    seq = model.sample_path(os, d, N, origin='link', max_len=100)
     sample_paths[scenario] = seq
 
 
@@ -265,8 +285,11 @@ def plot(key_='len', file_path=None, path_=None, flow=None):
                         linewidth=1.5, zorder=zorder) #, alpha=0.9
     # short_links.plot(ax=ax, column=key_, linewidths=1.5, color='r')
     else:
-        cmap = plt.get_cmap("Greens")
-        link_gdf.plot(ax=ax, linewidths=1., column=key_, cmap=cmap, vmin=0., vmax=.8, legend=True) #, color='gray'
+        if key_[:10] == 'vegetation':
+            cmap = plt.get_cmap("Greens")
+            link_gdf.plot(ax=ax, linewidths=1., column=key_, cmap=cmap, vmin=0., vmax=.8, legend=True) #, color='gray'
+        else:
+            link_gdf.plot(ax=ax, linewidths=1., column=key_, legend=True) #, color='gray'
         if path_ is not None:
             # link_gdf.plot(ax=ax, linewidths=1.0, column='green')
             obs_link_gdf = link_gdf.query(f'link_id in {list(path_)}')
@@ -282,7 +305,10 @@ for key_ in ['vegetation', 'vegetation_sc_g', 'vegetation_sc_gl']:
     plot(key_=key_, file_path=key_+f'_{delta_green}')
 
 # %%
+plot(key_='sidewalk')
+
+# %%
 for scenario, link_flow in link_flows.items():
     print(scenario)
     # if scenario[:6] == 'modelL':
-    plot(key_=None, flow=link_flow[sc_link_idxs], file_path=f'{scenario}_{delta_green}') #
+    plot(key_=None, flow=link_flow[sc_link_idxs]) #, file_path=f'{scenario}_{delta_green}'
