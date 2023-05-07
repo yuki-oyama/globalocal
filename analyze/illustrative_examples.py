@@ -36,6 +36,9 @@ for r, line in enumerate(lines):
 print(routes)
 
 # %%
+mu_g = 1.0
+
+# %%
 def compute_path_prob(P):
     probs = {}
     for key_, route in routes.items():
@@ -69,20 +72,14 @@ xs = {
     'scape': (x_free[2], 'link', 1),
 }
 
-# %%
 # true parameters & probtbility
 betas = [
     ('b_e_time', -1., None, None, 'exp_time', 0),
 ]
 
-# %%
-rl = RL(g, xs, betas, mu=1., mu_g=1., estimate_mu=False)
-
-# %%
+rl = RL(g, xs, betas, mu=1., mu_g=mu_g, estimate_mu=False)
 rl.eval_prob()
 P = rl.p[d].toarray()
-
-# %%
 eval_path_prob('case1', P)
 
 # %%
@@ -97,14 +94,9 @@ betas = [
     ('b_d_time', -1., None, None, 'dif_time', 0),
 ]
 
-# %%
-rl = RL(g, xs, betas, mu=1., mu_g=1., estimate_mu=False)
-
-# %%
+rl = RL(g, xs, betas, mu=1., mu_g=mu_g, estimate_mu=False)
 rl.eval_prob()
 P = rl.p[d].toarray()
-
-# %%
 eval_path_prob('case2', P)
 
 # %%
@@ -119,14 +111,9 @@ betas = [
     ('b_d_time', -1., None, None, 'dif_time', 0),
 ]
 
-# %%
-rl = RL(g, xs, betas, mu=1., mu_g=1., estimate_mu=False)
-
-# %%
+rl = RL(g, xs, betas, mu=1., mu_g=mu_g, estimate_mu=False)
 rl.eval_prob()
 P = rl.p[d].toarray()
-
-# %%
 eval_path_prob('case3', P)
 
 # %%
@@ -141,21 +128,15 @@ betas = [
     ('b_scape', 2., None, None, 'scape', 0),
 ]
 
-# %%
-rl = RL(g, xs, betas, mu=1., mu_g=1., estimate_mu=False)
-
-# %%
+rl = RL(g, xs, betas, mu=1., mu_g=mu_g, estimate_mu=False)
 rl.eval_prob()
 P = rl.p[d].toarray()
-
-# %%
 eval_path_prob('case4', P)
 
 # %%
 results = pd.DataFrame(output).T
 print(results)
 results.to_csv(f'results/{network_}/path_probs.csv', index=True)
-
 
 # %%
 ## Sensitivity analysis for mu_g
@@ -285,9 +266,9 @@ def plotV(save=False):
 
     fig = plt.figure()
     ax = plt.subplot(1, 1, 1) #, projection="3d"
-    ax.set_xlim(0.95, x.max()+0.05)
-    ax.set_ylim(-4, 0)
-    ax.set_xticks(np.linspace(1, x.max(), int((x.max()-1)*5)+1))
+    ax.set_xlim(-0.05, x.max()+0.05)
+    ax.set_ylim(-4.5, 0)
+    ax.set_xticks(np.linspace(0, x.max(), int((x.max())*5)+1))
     ax.set_yticks(np.linspace(-4, 0, 9))
     ax.set_xlabel('mu_g')
     ax.set_ylabel('V')
@@ -306,10 +287,8 @@ def plotV(save=False):
 
 # %%
 plotV(save=False)
-
-sens_df['V1'] - sens_df['V2']
-
-sens_df['V3'] - sens_df['V5']
+# sens_df['V1'] - sens_df['V2']
+# sens_df['V3'] - sens_df['V5']
 
 # %%
 ## Sensitivity analysis for gamma
