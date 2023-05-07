@@ -71,9 +71,9 @@ class RL(object):
         # when estimating mu_global
         # this does not effect on eval_z if it is placed at tail (due to zip iteration)
         if self.estimate_mu:
-            self.beta.append(mu) #mu_g
-            self.freebetaNames.append('mu')
-            self.bounds.append((0., None)) # (0., None)
+            self.beta.append(mu_g) #mu_g
+            self.freebetaNames.append('mu_g')
+            self.bounds.append((0., 1.)) # (0., None)
         self.beta = np.array(self.beta, dtype=np.float)
         self.beta_hist = [self.beta]
 

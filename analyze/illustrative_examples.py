@@ -1,5 +1,5 @@
 """
-Braess network (update: 2023/5/5)
+Braess network (update: 2023/5/7)
     - with three routes
     - Example 1: with congestion (perception update)
     - Example 2: with scape (local perception)
@@ -17,7 +17,7 @@ np.random.seed(111)
 
 # %%
 # networks
-network_ = 'ladder'
+network_ = 'overlap'
 dir_ = f'data/{network_}/'
 node_data = pd.read_csv(dir_+'node.csv')
 link_data = pd.read_csv(dir_+'link.csv')
@@ -164,10 +164,10 @@ sens_results_case4 = {}
 sens_results = {3: sens_results_case3, 4: sens_results_case4}
 
 mu_gs = [1.]
-mu_gs += [1 + 0.1 * i for i in range(1,21)]
+mu_gs += [1 - 0.1 * i for i in range(1,10)]
 
 # %%
-case = 4
+case = 3
 
 # %%
 if case == 3:
@@ -205,16 +205,13 @@ for mu_g in mu_gs:
 
     sens_results[case][mu_g] = {
         **probs,
+        **{f'V{i}':V[i] for i in range(1,len(V)-1)},
         'z1': z[1],
         'z2': z[2],
-        'V1': V[1],
-        'V2': V[2],
         'P01': P[0,1],
         'P02': P[0,2],
         'P23': P[2,3],
         'P25': P[2,5],
-        # 'P13': P[1,3],
-        # 'P14': P[1,4],
     }
 
 
@@ -266,8 +263,53 @@ def plot(save=False):
         plt.show()
 
 # %%
-plot(save=True)
+plot(save=False)
 
+# %%
+def plotV(save=False):
+    plt.rcdefaults()
+    p = plt.rcParams
+    p["font.family"] = "Roboto"
+    p["figure.figsize"] = 6, 4
+    p["figure.dpi"] = 100
+    p["figure.facecolor"] = "#ffffff"
+    p["font.sans-serif"] = ["Roboto Condensed"]
+    # p["font.weight"] = "light"
+
+    p["ytick.minor.visible"] = False
+    p["xtick.minor.visible"] = False
+    p["axes.grid"] = True
+    p["grid.color"] = "0.5"
+    p["grid.linewidth"] = 0.5
+    p['axes.axisbelow'] = True # put grid behind
+
+    fig = plt.figure()
+    ax = plt.subplot(1, 1, 1) #, projection="3d"
+    ax.set_xlim(0.95, x.max()+0.05)
+    ax.set_ylim(-4, 0)
+    ax.set_xticks(np.linspace(1, x.max(), int((x.max()-1)*5)+1))
+    ax.set_yticks(np.linspace(-4, 0, 9))
+    ax.set_xlabel('mu_g')
+    ax.set_ylabel('V')
+
+    # contents
+    colors = ['r', 'b', 'g', 'y', 'c', 'k', 'gray', 'purple']
+    for i, c in zip(range(3,6), colors):
+        v_key = f'V{i}'
+        vs = sens_df[v_key].values
+        ax.plot(x, vs, marker='o', markeredgecolor="white", color=c, zorder=4, label=v_key)
+    ax.legend()
+    if save:
+        plt.savefig(f'results/{network_}/mug_V_case{case}.eps')
+    else:
+        plt.show()
+
+# %%
+plotV(save=False)
+
+sens_df['V1'] - sens_df['V2']
+
+sens_df['V3'] - sens_df['V5']
 
 # %%
 ## Sensitivity analysis for gamma

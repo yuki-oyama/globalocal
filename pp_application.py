@@ -223,7 +223,7 @@ if __name__ == '__main__':
                 'mu_g': models.get(model_type).mu_g,
             })
 
-    if config.estimate_mu: init_beta += [1.]
+    if config.estimate_mu: init_beta += [config.mu_g]
     n_success = 0
     for i, sample in enumerate(samples):
         if n_success >= 100 and config.isBootstrap:
@@ -341,7 +341,7 @@ if __name__ == '__main__':
             s_test_obs = prism.translate_observations(test_obs)
 
             # %%
-            if config.estimate_mu: init_beta += [1.]
+            if config.estimate_mu: init_beta += [config.mu_g]
             prism.beta = np.array(init_beta)
             LL0 = prism.calc_likelihood(observations=s_train_obs)
             print('prism model initial log likelihood:', LL0)
