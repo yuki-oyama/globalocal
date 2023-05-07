@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 
 # %%
-file_path = 'results/kannai/estimation/DRL0.99_Local_w_mu_greenlen_20230428T1515.csv'
+file_path = 'results/kannai/estimation/GlobaLocal_w_mu_newb_20230507T1553.csv'
 df = pd.read_csv(file_path, index_col=0)
 df = df.T
 df = df.dropna(how='any', axis=0)
@@ -46,3 +46,6 @@ if stderr != 0:
 
 # %%
 stderrs
+
+# %%
+df['LL'].values[0]

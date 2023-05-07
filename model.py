@@ -173,7 +173,7 @@ class RL(object):
         if beta is None: beta = self.beta
         assert beta.shape == self.beta.shape, f'betafree shape is not appropriate, it was {beta.shape} but should be {self.beta.shape}!!'
         # take mu_global as a parameter if estimating it
-        if self.estimate_mu: self.mu = beta[-1] #self.mu_g = beta[-1]
+        if self.estimate_mu: self.mu_g = beta[-1] #self.mu_g = beta[-1]
 
         v, v_dict, v_link, v_local, v_local_link = self._eval_v(beta)
         if self.parallel:

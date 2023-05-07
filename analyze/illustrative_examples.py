@@ -17,7 +17,7 @@ np.random.seed(111)
 
 # %%
 # networks
-network_ = 'overlap'
+network_ = 'ladder'
 dir_ = f'data/{network_}/'
 node_data = pd.read_csv(dir_+'node.csv')
 link_data = pd.read_csv(dir_+'link.csv')
@@ -163,8 +163,8 @@ sens_results_case3 = {}
 sens_results_case4 = {}
 sens_results = {3: sens_results_case3, 4: sens_results_case4}
 
-mu_gs = [1.]
-mu_gs += [1 - 0.1 * i for i in range(1,10)]
+mu_gs = [0.01]
+mu_gs += [0.05 * i for i in range(1,21)]
 
 # %%
 case = 3
@@ -243,9 +243,9 @@ def plot(save=False):
 
     fig = plt.figure()
     ax = plt.subplot(1, 1, 1) #, projection="3d"
-    ax.set_xlim(0.95, x.max()+0.05)
+    ax.set_xlim(-0.05, x.max()+0.05)
     ax.set_ylim(-0.05, 1.05)
-    ax.set_xticks(np.linspace(1, x.max(), int((x.max()-1)*5)+1))
+    ax.set_xticks(np.linspace(0, x.max(), int((x.max())*5)+1))
     ax.set_yticks(np.linspace(0, 1, 11))
     ax.set_xlabel('mu_g')
     ax.set_ylabel('Probability')

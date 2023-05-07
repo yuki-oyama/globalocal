@@ -62,7 +62,7 @@ green_scenarios = {
 df_G = pd.read_csv('results/kannai/estimation/20230425_sidewalk_bootstrapping/Global_BS_20230424T1921.csv', index_col=0).T
 df_dG = pd.read_csv('results/kannai/estimation/20230428_discounted_RL_bootstrapping/DRL0.99_Global_20230428T1512.csv', index_col=0).T
 df_L = pd.read_csv('results/kannai/estimation/20230425_sidewalk_bootstrapping/Local_wo_mu_greenlen_BS_20230425T1153.csv', index_col=0).T
-df_Lm = pd.read_csv('results/kannai/estimation/20230425_sidewalk_bootstrapping/Local_w_m_greenlen_BS_20230425T1251.csv', index_col=0).T
+df_Lm = pd.read_csv('results/kannai/estimation/20230507_with_mu_new_bound/Local_w_mu_newb_20230507T1545.csv', index_col=0).T
 df_dL = pd.read_csv('results/kannai/estimation/20230428_discounted_RL_bootstrapping/DRL0.99_Local_wo_m_greenlen_20230428T1510.csv', index_col=0).T
 
 # %%
@@ -144,10 +144,10 @@ for s, green in green_scenarios.items():
     features_l['greenlen'][2] = 1
     model_L = RL(g, features_l, beta_l, mu=1., mu_g=df_L['mu_g'].values[0], estimate_mu=False)
     models[f'modelL_{s}'] = model_L
-    # model_Lm = RL(g, features_l, beta_l, mu=1., mu_g=df_Lm['mu_g'].values[0], estimate_mu=False)
-    # models[f'modelLm_{s}'] = model_Lm
-    model_dL = RL(g, features_l, beta_l, mu=1., mu_g=df_dL['mu_g'].values[0], estimate_mu=False, gamma=df_dL['gamma'].values[0])
-    models[f'modeldL_{s}'] = model_dL
+    model_Lm = RL(g, features_l, beta_l, mu=1., mu_g=df_Lm['mu_g'].values[0], estimate_mu=False)
+    models[f'modelLm_{s}'] = model_Lm
+    # model_dL = RL(g, features_l, beta_l, mu=1., mu_g=df_dL['mu_g'].values[0], estimate_mu=False, gamma=df_dL['gamma'].values[0])
+    # models[f'modeldL_{s}'] = model_dL
 
 # %%
 N = 500
@@ -310,5 +310,5 @@ plot(key_='sidewalk')
 # %%
 for scenario, link_flow in link_flows.items():
     print(scenario)
-    # if scenario[:6] == 'modelL':
-    plot(key_=None, flow=link_flow[sc_link_idxs]) #, file_path=f'{scenario}_{delta_green}'
+    if scenario[:7] == 'modelLm':
+        plot(key_=None, flow=link_flow[sc_link_idxs], file_path=f'{scenario}_{delta_green}') #
