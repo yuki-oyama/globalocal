@@ -79,8 +79,8 @@ betas = [
 
 rl = RL(g, xs, betas, mu=1., mu_g=mu_g, estimate_mu=False)
 rl.eval_prob()
-P = rl.p[d].toarray()
-eval_path_prob('case1', P)
+P1 = rl.p[d].toarray()
+eval_path_prob('case1', P1)
 
 # %%
 ## Case 2: time difference is globally perceived
@@ -96,8 +96,8 @@ betas = [
 
 rl = RL(g, xs, betas, mu=1., mu_g=mu_g, estimate_mu=False)
 rl.eval_prob()
-P = rl.p[d].toarray()
-eval_path_prob('case2', P)
+P2 = rl.p[d].toarray()
+eval_path_prob('case2', P2)
 
 # %%
 ## Case 3: difference is perceived locally
@@ -113,8 +113,8 @@ betas = [
 
 rl = RL(g, xs, betas, mu=1., mu_g=mu_g, estimate_mu=False)
 rl.eval_prob()
-P = rl.p[d].toarray()
-eval_path_prob('case3', P)
+P3 = rl.p[d].toarray()
+eval_path_prob('case3', P3)
 
 # %%
 ## Case 4: scape is perceived locally
@@ -130,13 +130,19 @@ betas = [
 
 rl = RL(g, xs, betas, mu=1., mu_g=mu_g, estimate_mu=False)
 rl.eval_prob()
-P = rl.p[d].toarray()
-eval_path_prob('case4', P)
+P4 = rl.p[d].toarray()
+eval_path_prob('case4', P4)
 
 # %%
 results = pd.DataFrame(output).T
 print(results)
 results.to_csv(f'results/{network_}/path_probs.csv', index=True)
+
+# %%
+# routes
+# P1[0,2] * P2[2,5] * P2[5,8] * P2[8,-1]
+# P1[0,2] * P2[2,3] * P2[3,4] * P2[4,7] * P2[7,-1]
+
 
 # %%
 ## Sensitivity analysis for mu_g
@@ -193,6 +199,8 @@ for mu_g in mu_gs:
         'P02': P[0,2],
         'P23': P[2,3],
         'P25': P[2,5],
+        'P47': P[4,7],
+        'P46': P[4,6],
     }
 
 
@@ -225,9 +233,9 @@ def plot(save=False):
     fig = plt.figure()
     ax = plt.subplot(1, 1, 1) #, projection="3d"
     ax.set_xlim(-0.05, x.max()+0.05)
-    ax.set_ylim(-0.05, 1.05)
+    ax.set_ylim(-0.025, .525)
     ax.set_xticks(np.linspace(0, x.max(), int((x.max())*5)+1))
-    ax.set_yticks(np.linspace(0, 1, 11))
+    ax.set_yticks(np.linspace(0, 0.5, 11))
     ax.set_xlabel('mu_g')
     ax.set_ylabel('Probability')
 
@@ -239,7 +247,7 @@ def plot(save=False):
         ax.plot(x, ps, marker='o', markeredgecolor="white", color=c, zorder=4, label=p_key)
     ax.legend()
     if save:
-        plt.savefig(f'results/braess/mug_sens_analysis_case{case}.eps')
+        plt.savefig(f'results/{network_}/mug_sens_analysis_case{case}.eps')
     else:
         plt.show()
 
@@ -275,7 +283,7 @@ def plotV(save=False):
 
     # contents
     colors = ['r', 'b', 'g', 'y', 'c', 'k', 'gray', 'purple']
-    for i, c in zip(range(3,6), colors):
+    for i, c in zip(range(1,3), colors):
         v_key = f'V{i}'
         vs = sens_df[v_key].values
         ax.plot(x, vs, marker='o', markeredgecolor="white", color=c, zorder=4, label=v_key)
@@ -289,6 +297,50 @@ def plotV(save=False):
 plotV(save=False)
 # sens_df['V1'] - sens_df['V2']
 # sens_df['V3'] - sens_df['V5']
+
+# %%
+def plotP(keys_, save=False):
+    plt.rcdefaults()
+    p = plt.rcParams
+    p["font.family"] = "Roboto"
+    p["figure.figsize"] = 6, 4
+    p["figure.dpi"] = 100
+    p["figure.facecolor"] = "#ffffff"
+    p["font.sans-serif"] = ["Roboto Condensed"]
+    # p["font.weight"] = "light"
+
+    p["ytick.minor.visible"] = False
+    p["xtick.minor.visible"] = False
+    p["axes.grid"] = True
+    p["grid.color"] = "0.5"
+    p["grid.linewidth"] = 0.5
+    p['axes.axisbelow'] = True # put grid behind
+
+    fig = plt.figure()
+    ax = plt.subplot(1, 1, 1) #, projection="3d"
+    ax.set_xlim(-0.05, x.max()+0.05)
+    ax.set_ylim(-0.025, 1.025)
+    ax.set_xticks(np.linspace(0, x.max(), int((x.max())*5)+1))
+    ax.set_yticks(np.linspace(0, 1, 11))
+    ax.set_xlabel('mu_g')
+    ax.set_ylabel('Probability')
+
+    # contents
+    colors = ['r', 'b', 'g', 'y', 'c', 'k', 'gray', 'purple']
+    for key_, c in zip(keys_, colors):
+        p_key = f'P{key_}'
+        ps = sens_df[p_key].values
+        ax.plot(x, ps, marker='o', markeredgecolor="white", color=c, zorder=4, label=p_key)
+    ax.legend()
+    if save:
+        plt.savefig(f'results/{network_}/mug_element_probs_case{case}.eps')
+    else:
+        plt.show()
+
+# %%
+keys_ = ['01', '02', '23', '25', '47', '46']
+plotP(keys_, save=False)
+
 
 # %%
 ## Sensitivity analysis for gamma
