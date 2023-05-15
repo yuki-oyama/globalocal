@@ -73,7 +73,7 @@ class RL(object):
         if self.estimate_mu:
             self.beta.append(mu_g) #mu_g
             self.freebetaNames.append('mu_g')
-            self.bounds.append((0., 1.)) # (0., None)
+            self.bounds.append((1., None)) # (0., 1.)
         self.beta = np.array(self.beta, dtype=np.float)
         self.beta_hist = [self.beta]
 
@@ -221,8 +221,8 @@ class RL(object):
         self.z[d] = z
 
         # compute the probtbility
-        logit = np.exp((vd + vd_local)/self.mu) * (senders != L) *\
-                    (z[receivers] ** (self.gamma * self.mu_g/self.mu))
+        logit = np.exp(self.mu * (vd + vd_local)) * (senders != L) *\
+                    (z[receivers] ** (self.gamma * self.mu/self.mu_g))
         deno = np.zeros((L+1,), dtype=np.float)
         np.add.at(deno, senders, logit)
         # W = csr_matrix(
@@ -243,7 +243,7 @@ class RL(object):
     def _eval_z(self, vd, senders, receivers):
         # weight matrix of size N x N
         L = len(self.graph.links)
-        exp_v = np.exp(vd / self.mu_g) * (senders != L) # E x 1
+        exp_v = np.exp(self.mu_g * vd) * (senders != L) # E x 1
         M = csr_matrix((exp_v, (senders, receivers)), shape=(L+1,L+1)) # L+1 x L+1
         I = sp.identity(L+1)
         b = csr_matrix(([1.], ([L], [0])), shape=(L+1, 1)) # L+1 x 1
@@ -255,7 +255,7 @@ class RL(object):
     def _eval_z_vi(self, vd, senders, receivers):
         # weight matrix of size N x N
         L = len(self.graph.links)
-        exp_v = np.exp(vd / self.mu_g) * (senders != L) # E x 1
+        exp_v = np.exp(self.mu_g * vd) * (senders != L) # E x 1
         M = csr_matrix((exp_v, (senders, receivers)), shape=(L+1,L+1)) # L+1 x L+1
         b = np.zeros((L+1,), dtype=np.float) # L+1 x 1
         z = np.ones((L+1,), dtype=np.float) # L+1 x 1
@@ -402,8 +402,8 @@ class RL(object):
 
                 # compute the probtbility
                 z = self.z[d]
-                logit = np.exp((vd + vd_local)/self.mu) * (senders != L) *\
-                            (z[receivers] ** (self.mu_g/self.mu))
+                logit = np.exp(self.mu * (vd + vd_local)) * (senders != L) *\
+                            (z[receivers] ** (self.mu/self.mu_g))
                 W = csr_matrix(
                     (logit, (senders, receivers)), shape=(L+1,L+1)
                 )

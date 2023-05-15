@@ -150,8 +150,9 @@ sens_results_case3 = {}
 sens_results_case4 = {}
 sens_results = {3: sens_results_case3, 4: sens_results_case4}
 
-mu_gs = [0.01]
-mu_gs += [0.05 * i for i in range(1,21)]
+mu_gs = [1.0]
+delta_mu = 0.5
+mu_gs += [1 + delta_mu * i for i in range(1,31)]
 
 # %%
 case = 3
@@ -232,9 +233,9 @@ def plot(save=False):
 
     fig = plt.figure()
     ax = plt.subplot(1, 1, 1) #, projection="3d"
-    ax.set_xlim(-0.05, x.max()+0.05)
+    ax.set_xlim(1-delta_mu, x.max()+delta_mu)
     ax.set_ylim(-0.025, .525)
-    ax.set_xticks(np.linspace(0, x.max(), int((x.max())*5)+1))
+    ax.set_xticks(np.linspace(1, x.max(), int((x.max()-1))+1))
     ax.set_yticks(np.linspace(0, 0.5, 11))
     ax.set_xlabel('mu_g')
     ax.set_ylabel('Probability')
@@ -247,7 +248,7 @@ def plot(save=False):
         ax.plot(x, ps, marker='o', markeredgecolor="white", color=c, zorder=4, label=p_key)
     ax.legend()
     if save:
-        plt.savefig(f'results/{network_}/mug_sens_analysis_case{case}.eps')
+        plt.savefig(f'results/{network_}/mug_sens_analysis_case{case}_ladder3_revMu.eps')
     else:
         plt.show()
 
