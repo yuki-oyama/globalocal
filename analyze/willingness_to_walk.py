@@ -2,8 +2,8 @@ import pandas as pd
 import numpy as np
 
 # %%
-dir_ = 'results/kannai/estimation/20230507_with_mu_new_bound/'
-file_path = dir_ + 'Local_w_mu_newb_20230507T1545.csv'
+dir_ = 'results/kannai/estimation/20230515_mu_rev/'
+file_path = dir_ + 'Local_w_mu_20230515T1744.csv'
 df = pd.read_csv(file_path, index_col=0)
 df = df.T
 df = df.dropna(how='any', axis=0)
@@ -34,7 +34,7 @@ if 'beta_greenlen_g' in beta_names_g:
 if 'beta_greenlen_l' in beta_names_l:
     df['WTP_green_10p_local'] = (df['beta_greenlen_l']*10) / df['beta_length_g']
     WTP_keys.append('WTP_green_10p_local')
-    df['WTP_green_10p_local_scaled'] = (df['beta_greenlen_l']*10 / df['mu_g']) / df['beta_length_g']
+    df['WTP_green_10p_local_scaled'] = (df['mu_g'] * df['beta_greenlen_l']*10) / df['beta_length_g']
     WTP_keys.append('WTP_green_10p_local_scaled')
 
 
