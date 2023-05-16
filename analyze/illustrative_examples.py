@@ -188,7 +188,7 @@ for mu_g in mu_gs:
     rl.eval_prob()
     P = rl.p[d].toarray()
     z = rl.get_z(d)
-    V = mu_g * np.log(z)
+    V = np.log(z) / mu_g
     probs = compute_path_prob(P)
 
     sens_results[case][mu_g] = {
@@ -275,19 +275,19 @@ def plotV(save=False):
 
     fig = plt.figure()
     ax = plt.subplot(1, 1, 1) #, projection="3d"
-    ax.set_xlim(-0.05, x.max()+0.05)
-    ax.set_ylim(-4.5, 0)
-    ax.set_xticks(np.linspace(0, x.max(), int((x.max())*5)+1))
+    ax.set_xlim(1-delta_mu, x.max()+delta_mu)
+    ax.set_ylim(-4.5, 0.5)
+    ax.set_xticks(np.linspace(1, x.max(), int((x.max())-1)+1))
     ax.set_yticks(np.linspace(-4, 0, 9))
     ax.set_xlabel('mu_g')
     ax.set_ylabel('V')
 
     # contents
     colors = ['r', 'b', 'g', 'y', 'c', 'k', 'gray', 'purple']
-    for i, c in zip(range(1,3), colors):
+    for i, c in zip(range(1,9), colors):
         v_key = f'V{i}'
         vs = sens_df[v_key].values
-        ax.plot(x, vs, marker='o', markeredgecolor="white", color=c, zorder=4, label=v_key)
+        ax.plot(x, vs, marker='', markeredgecolor="white", color=c, zorder=4, label=v_key)
     ax.legend()
     if save:
         plt.savefig(f'results/{network_}/mug_V_case{case}.eps')
@@ -295,7 +295,7 @@ def plotV(save=False):
         plt.show()
 
 # %%
-plotV(save=False)
+plotV(save=True)
 # sens_df['V1'] - sens_df['V2']
 # sens_df['V3'] - sens_df['V5']
 
