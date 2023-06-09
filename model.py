@@ -31,7 +31,7 @@ class RL(object):
                 ):
 
         # setting
-        self.model_type = 'rl' if gamma == 1 else 'drl'
+        self.model_type = 'rl'
         self.eps = 1e-8
         self.inf = 1e+10
         self.parallel = parallel
@@ -213,9 +213,9 @@ class RL(object):
         senders, receivers = edges[:,0], edges[:,1]
 
         # compute z
-        if self.model_type == 'rl':
+        if self.gamma == 1:
             z, exp_v = self._eval_z(vd, senders, receivers)
-        elif self.model_type == 'drl':
+        else:
             z, exp_v = self._eval_z_vi(vd, senders, receivers)
         assert np.min(z) > 0., 'z includes zeros or negative values!!: beta={}, d={}, z={}'.format(self.beta, d, z)
         self.z[d] = z

@@ -200,13 +200,13 @@ if __name__ == '__main__':
     if config.rl: outputs['RL'] = {i:{} for i in range(config.n_samples)}
     if config.prism: outputs['PrismRL'] = {i:{} for i in range(config.n_samples)}
     # function for record results
-    def record_res(i, model_type, res, stderr, t_val, L0, L_val, runtime, init_beta):
+    def record_res(i, model_type, res, stderr, t_val, L0, L_val, runtime, init_beta, gamma):
         outputs[model_type][i] = {
             'L0': L0,
             'LL': -res.fun,
             'Lv': L_val,
             'runtime': runtime,
-            'gamma': config.gamma
+            'gamma': gamma
         }
         Vg = len(config.vars_g)
         for var_name, b, s, t, b0 in zip(var_names, res.x, stderr, t_val, init_beta):
@@ -244,6 +244,9 @@ if __name__ == '__main__':
             # %%
             # only observed destinations in samples
             rl.partitions = list(train_obs.keys())
+
+            # %%
+            rl.gamma = config.gamma - 0.005 * i
 
             # %%
             rl.beta = np.array(init_beta)
@@ -324,7 +327,7 @@ if __name__ == '__main__':
                 # %%
                 # record results
                 # record_res(i, 'RL', results_rl[0], results_rl[2], results_rl[3], LL0_rl, LL_val_rl, rl_time, init_beta)
-                record_res(i, 'RL', results_rl, stderr, t_val, LL0_rl, LL_val_rl, rl_time, init_beta)
+                record_res(i, 'RL', results_rl, stderr, t_val, LL0_rl, LL_val_rl, rl_time, init_beta, rl.gamma)
                 n_success += 1
                 print(f"RL was successfully estimated for sample {i}, and so far {n_success}; param. values = {rl.beta}")
             except:
@@ -404,7 +407,7 @@ if __name__ == '__main__':
 
             # %%
             # record results
-            record_res(i, 'PrismRL', prism_res, stderr, t_val, LL0, LL_val, prism_time, init_beta)
+            record_res(i, 'PrismRL', prism_res, stderr, t_val, LL0, LL_val, prism_time, init_beta, prism.gamma)
 
     if config.rl:
         df_rl = pd.DataFrame(outputs['RL']).T
