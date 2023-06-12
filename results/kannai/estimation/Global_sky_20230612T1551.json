@@ -1,0 +1,49 @@
+{
+    "rl": true,
+    "prism": false,
+    "parallel": false,
+    "version": "Global_sky_20230612T1551",
+    "state_key": "d",
+    "T": 15,
+    "uturn": true,
+    "uturn_penalty": -20.0,
+    "min_n": 0,
+    "mu_g": 1.0,
+    "vars_g": [
+        "length",
+        "crosswalk",
+        "sidewalklen",
+        "greenlen",
+        "skylen"
+    ],
+    "init_beta_g": [
+        -0.3,
+        -1.2,
+        0.1,
+        0.0,
+        0.0
+    ],
+    "lb_g": [
+        null,
+        null,
+        null,
+        null,
+        null
+    ],
+    "ub_g": [
+        0.0,
+        0.0,
+        null,
+        null,
+        null
+    ],
+    "vars_l": [],
+    "init_beta_l": [],
+    "lb_l": [],
+    "ub_l": [],
+    "estimate_mu": false,
+    "gamma": 1.0,
+    "n_samples": 1,
+    "test_ratio": 0.0,
+    "isBootstrap": false
+}

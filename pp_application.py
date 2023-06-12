@@ -246,7 +246,7 @@ if __name__ == '__main__':
             rl.partitions = list(train_obs.keys())
 
             # %%
-            rl.gamma = config.gamma - 0.005 * i
+            # rl.gamma = config.gamma - 0.005 * i
 
             # %%
             rl.beta = np.array(init_beta)
