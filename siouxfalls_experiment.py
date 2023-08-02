@@ -26,7 +26,6 @@ def float_or_none(value):
 
 # Model parameters
 model_arg = add_argument_group('Model')
-model_arg.add_argument('--rl', type=str2bool, default=True, help='if estimate RL or not')
 model_arg.add_argument('--init_beta', nargs='+', type=float, default=[-1.,1.], help='initial parameter values')
 model_arg.add_argument('--vars', nargs='+', type=str, default=['length', 'caplen'], help='explanatory variables')
 model_arg.add_argument('--true_beta_g', nargs='+', type=float, default=[-2.5,0.5], help='initial parameter values')
