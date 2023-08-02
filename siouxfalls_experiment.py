@@ -1,10 +1,10 @@
 import numpy as np
 import pandas as pd
 from optimparallel import minimize_parallel
-from model import RL
-from graph import Graph
-from utils import Timer
-from dataset import count_loops
+from core.model import RL
+from core.graph import Graph
+from core.utils import Timer
+from core.dataset import count_loops
 import argparse
 np.random.seed(124)
 

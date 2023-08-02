@@ -1,0 +1,8 @@
+# folders
+results/
+tests/
+ValueFunc/
+__pycache__/
+
+# files
+.DS_Store

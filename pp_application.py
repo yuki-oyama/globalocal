@@ -3,10 +3,10 @@ import pandas as pd
 from optimparallel import minimize_parallel
 from numdifftools import Hessian
 from autograd import grad
-from model import PrismRL, RL
-from graph import Graph
-from utils import Timer
-from dataset import *
+from core.model import PrismRL, RL
+from core.graph import Graph
+from core.utils import Timer
+from core.dataset import *
 import time
 import json
 import argparse
@@ -97,7 +97,7 @@ if __name__ == '__main__':
     # %%
     network_ = 'kannai'
     dir_ = f'data/{network_}/'
-    link_data = pd.read_csv(dir_+'link_bidir_rev2302.csv')
+    link_data = pd.read_csv(dir_+'link.csv')
     node_data = pd.read_csv(dir_+'node.csv')
     obs_data = pd.read_csv(dir_+'observations_link.csv')
 
@@ -301,21 +301,6 @@ if __name__ == '__main__':
                     t_val[-1] = (results_rl.x[-1] - 1) / stderr[-1]
                 rl.print_results(results_rl, stderr, t_val, LL0_rl)
 
-                # # %%
-                # import scipy
-                # scipy.optimize.approx_fprime(rl.beta, f, epsilon=1e-6)
-
-                # print('calculate gradient...')
-                # hessian = []
-                # grad_fn = grad(f)
-                # grads = grad_fn(rl.beta)
-                # print(grads)
-                # grads_sq = grads[0].squeeze()
-                # for grad in grads_sq:
-                #     hess = autograd.grad(grad, layer.parameters(), retain_graph=True)
-                #     hess = hess[0].squeeze()
-                #     hessian.append(hess)
-
                 # %%
                 if config.test_ratio > 0:
                     # validation
@@ -332,162 +317,3 @@ if __name__ == '__main__':
                 print(f"RL was successfully estimated for sample {i}, and so far {n_success}; param. values = {rl.beta}")
             except:
                 print(f"RL is not feasible for sample {i}; param. values = {rl.beta}")
-
-    #     # %%
-    #     if config.prism:
-    #         # fixed mu_g
-    #         if not config.estimate_mu and config.n_samples > 1 and config.test_ratio == 0:
-    #             prism.mu_g = config.mu_g - 0.1 * i
-    #
-    #         # %%
-    #         s_train_obs = prism.translate_observations(train_obs)
-    #         s_test_obs = prism.translate_observations(test_obs)
-    #
-    #         # %%
-    #         if config.estimate_mu: init_beta += [config.mu_g]
-    #         prism.beta = np.array(init_beta)
-    #         LL0 = prism.calc_likelihood(observations=s_train_obs)
-    #         print('prism model initial log likelihood:', LL0)
-    #
-    #         def f(x):
-    #             # prism.beta = x
-    #             # if config.estimate_mu: prism.mu_g = prism.beta[-1]
-    #             # compute probability
-    #             prism.eval_prob(x)
-    #             # calculate log-likelihood
-    #             LL = 0.
-    #             for key_, paths in s_train_obs.items():
-    #                 p = prism.p[key_]
-    #                 max_len, N = paths.shape
-    #                 Lk = np.zeros(N, dtype=np.float)
-    #                 for j in range(max_len - 1):
-    #                     L = np.array(p[paths[j], paths[j+1]])[0]
-    #                     assert (L > 0 ).all(), f'L includes zeros: key_={key_}, j={j}, pathj={paths[j]}, pathj+1={paths[j+1]}'
-    #                     Lk += np.log(L)
-    #                 LL += np.sum(Lk)
-    #             return -LL
-    #
-    #         # %%
-    #         # estimation
-    #         print(f"Prism RL model estimation for sample {i}...")
-    #         print(f"Started with initial value {prism.beta}")
-    #         Niter = 1
-    #         timer.start()
-    #         prism_res = minimize_parallel(f, x0=prism.beta, bounds=prism.bounds, options={'disp':False},
-    #                                         callback=callbackF) #, parallel={'max_workers':4, 'verbose': True}
-    #         prism_time = timer.stop()
-    #         print(f"estimation time is {prism_time}s.")
-    #         # after estimation
-    #         prism.beta = prism_res.x
-    #         cov_matrix = prism_res.hess_inv if type(prism_res.hess_inv) == np.ndarray else prism_res.hess_inv.todense()
-    #         # hess_fn = Hessian(f)(prism_res.x)
-    #         # hess = hess_fn(prism_res.x)
-    #         # cov_matrix = np.linalg.inv(hess)
-    #         stderr = np.sqrt(np.diag(cov_matrix))
-    #         t_val = prism_res.x / stderr
-    #         prism.print_results(prism_res, stderr, t_val, LL0)
-    #         print(prism_res)
-    #
-    #         # %%
-    #         # print("Prism RL model estimation...")
-    #         # timer.start()
-    #         # results = prism.estimate(observations=s_train_obs, method='L-BFGS-B', disp=False, hess='res')
-    #         # prism_time = timer.stop()
-    #         # print(f"estimation time is {prism_time}s.")
-    #         # prism.print_results(results[0], results[2], results[3], LL0)
-    #
-    #         # %%
-    #         # validation
-    #         if config.test_ratio > 0:
-    #             prism.partitions = list(s_test_obs.keys())
-    #             LL_val = prism.calc_likelihood(observations=s_test_obs)
-    #             print('Prism RL model validation log likelihood:', LL_val)
-    #         else:
-    #             LL_val = 0.
-    #
-    #         # %%
-    #         # record results
-    #         record_res(i, 'PrismRL', prism_res, stderr, t_val, LL0, LL_val, prism_time, init_beta, prism.gamma)
-    #
-    # if config.rl:
-    #     df_rl = pd.DataFrame(outputs['RL']).T
-    #     print(df_rl)
-    #     model_type = 'RL' if config.gamma == 1 else f'DRL{config.gamma}'
-    #     if config.test_ratio > 0:
-    #         # for validation
-    #         df_rl.to_csv(f'results/{network_}/validation/{model_type}_{config.version}.csv', index=True)
-    #     else:
-    #         # for estimation
-    #         df_rl.T.to_csv(f'results/{network_}/estimation/{model_type}_{config.version}.csv', index=True)
-    # if config.prism:
-    #     df_prism = pd.DataFrame(outputs['PrismRL']).T
-    #     print(df_prism)
-    #     if config.test_ratio > 0:
-    #         # for validation
-    #         df_prism.to_csv(f'results/{network_}/validation/PrismRL_{config.version}.csv', index=True)
-    #     else:
-    #         # for estimation
-    #         df_prism.T.to_csv(f'results/{network_}/estimation/PrismRL_{config.version}.csv', index=True)
-    #
-    # # %%
-    # # write config file
-    # dir_ = f'results/{network_}/'
-    # dir_ = dir_ + 'validation/' if config.test_ratio > 0 else dir_ + 'estimation/'
-    # with open(f"{dir_}{config.version}.json", mode="w") as f:
-    #     json.dump(config.__dict__, f, indent=4)
-
-
-# %%
-zs = {}
-for d in rl.partitions:
-    zs[d] = rl.get_z(d)
-
-
-import matplotlib.pyplot as plt
-%matplotlib inline
-import geopandas as gpd
-from shapely import wkt
-
-node_gdf = gpd.GeoDataFrame(
-    node_data, geometry=gpd.points_from_xy(node_data.x, node_data.y))
-link_data['WKT'] = gpd.GeoSeries.from_wkt(link_data['WKT'])
-link_gdf = gpd.GeoDataFrame(link_data, geometry='WKT')
-
-zs[d][:-1].shape
-
-# %%
-def plot(d, save=False):
-    plt.rcdefaults()
-    p = plt.rcParams
-    p["font.family"] = "Roboto"
-    p["figure.figsize"] = 6, 4
-    p["figure.dpi"] = 100
-    p["figure.facecolor"] = "#ffffff"
-    p["font.sans-serif"] = ["Roboto Condensed"]
-    p['axes.axisbelow'] = True # put grid behind
-
-    fig = plt.figure()
-    ax = plt.subplot(1, 1, 1) #, projection="3d"
-
-    # contents
-    # node plot
-    cmap = plt.get_cmap("Blues")
-    link_gdf['valuefunc'] = np.log(zs[d][:-1])
-    # link_gdf.plot(ax=ax, linewidths=0.25, column=key_, color='gray')
-    link_gdf.plot(ax=ax, linewidths=0.75, column='valuefunc', cmap=cmap, vmin=-10., vmax=0) #
-    d_node = node_gdf.query(f'node_id == {d}')
-    d_node.plot(ax=ax, color='r', alpha=0.5)
-
-    if save:
-        plt.savefig(f'ValueFunc/valuefunc_{d}.eps')
-    else:
-        plt.show()
-
-# %%
-plot(11, save=True)
-
-
-# %%
-for idx_, d in enumerate(rl.partitions):
-    print(idx_, d)
-    plot(d, save=True)

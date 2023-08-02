@@ -1,12 +1,12 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-%matplotlib inline
-from graph import Graph
-from dataset import *
+# %matplotlib inline
+from core.graph import Graph
+from core.dataset import *
 import geopandas as gpd
 from shapely import wkt
-from model import RL, PrismRL
+from core.model import RL, PrismRL
 from copy import deepcopy
 
 # %%
@@ -17,10 +17,10 @@ delta_green = 0.4
 dir_ = 'data/kannai/'
 res_dir = 'results/kannai/simulation/'
 # original network data
-link_data = pd.read_csv(dir_+'link_bidir_rev2302.csv')
+link_data = pd.read_csv(dir_+'link.csv')
 node_data = pd.read_csv(dir_+'node.csv')
 # for visualization focus
-sc_links = pd.read_csv(dir_+'link_bidir_reduced_scenario2.csv')
+sc_links = pd.read_csv(dir_+'scenarios/link_bidir_reduced_scenario2.csv')
 sc_links = sc_links.fillna(0)
 sc_link_idxs = sc_links['fid'].values - 1
 sc_links['vegetation'] = link_data['vegetation'].values[sc_link_idxs]

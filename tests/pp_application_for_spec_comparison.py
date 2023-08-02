@@ -3,10 +3,10 @@ import pandas as pd
 from optimparallel import minimize_parallel
 from numdifftools import Hessian
 from autograd import grad
-from model import PrismRL, RL
-from graph import Graph
-from utils import Timer
-from dataset import *
+from core.model import PrismRL, RL
+from core.graph import Graph
+from core.utils import Timer
+from core.dataset import *
 import time
 import json
 import argparse

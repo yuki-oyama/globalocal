@@ -1,8 +1,8 @@
 """
-Braess network (update: 2023/5/7)
-    - with three routes
-    - Example 1: with congestion (perception update)
-    - Example 2: with scape (local perception)
+Ladder network (update: 2023/07)
+    - with five routes
+    - Example 1: with congestion perceived globally
+    - Example 2: with congestion perceived only locally
 """
 
 # %%
