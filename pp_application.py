@@ -1,9 +1,7 @@
 import numpy as np
 import pandas as pd
 from optimparallel import minimize_parallel
-from numdifftools import Hessian
-from autograd import grad
-from core.model import PrismRL, RL
+from core.model import RL
 from core.graph import Graph
 from core.utils import Timer
 from core.dataset import *
@@ -30,14 +28,10 @@ def float_or_none(value):
 
 # Model parameters
 model_arg = add_argument_group('Model')
-model_arg.add_argument('--rl', type=str2bool, default=True, help='if estimate RL or not')
-model_arg.add_argument('--prism', type=str2bool, default=False, help='if estimate prism RL or not')
 model_arg.add_argument('--parallel', type=str2bool, default=False, help='if implement parallel computation or not')
 model_arg.add_argument('--version', type=str, default='test', help='version name')
 
 # Hyperparameters
-model_arg.add_argument('--state_key', type=str, default='d', help='od or d')
-model_arg.add_argument('--T', type=int, default=15, help='time constraint')
 model_arg.add_argument('--uturn', type=str2bool, default=True, help='if add uturn dummy or not')
 model_arg.add_argument('--uturn_penalty', type=float, default=-20., help='penalty for uturn')
 model_arg.add_argument('--min_n', type=int, default=0, help='minimum number observed for d')
@@ -111,15 +105,13 @@ if __name__ == '__main__':
     link_data['skylen'] = link_data['sky'] * link_data['length']
     features = link_data
 
-    # %%
     obs_data = reset_index(link_data, node_data, obs_data)
     links = {link_id: (from_, to_) for link_id, from_, to_ in link_data[['link_id', 'from_', 'to_']].values}
 
-    # %%
+    # read and prepare data for estimation
     dests, obs, obs_filled, n_paths, max_len, od_data, samples = read_mm_results(
         obs_data, links, min_n_paths=config.min_n, n_samples=config.n_samples, test_ratio=config.test_ratio, seed_=111, isBootstrap=config.isBootstrap)
 
-    # %%
     # number of paths
     print(f"number of paths observed: {n_paths}")
     # loop counts
@@ -128,29 +120,10 @@ if __name__ == '__main__':
         if n_loop > 0:
             print(f"number of paths including loops observed: {n_loop} for destination {d}")
 
-    # %%
     # Graph
     g = Graph()
     g.read_data(node_data=node_data, link_data=link_data, od_data=od_data) #features=['length', 'walkwidth', 'green', 'gradient', 'crosswalk', 'walkratio', 'width', 'carst', 'greenlen']
-    # g.update(T=T)
-    # g.links.shape
-    # g.edges.shape
 
-    # %%
-    if config.prism:
-        detour_df = analyze_detour_rate(g, obs)
-        # detour_df['detour_rate'].describe()
-        # detour_df.plot.scatter('min_step', 'obs_step')
-
-        g.define_T_from_obs(detour_df)
-        print(f"T = {g.T}")
-
-        timer.start()
-        g.get_state_networks(method=config.state_key, parallel=True)
-        snet_time = timer.stop()
-        print(f"time to get snets is {snet_time}s.")
-
-    # %%
     # variables and parameters in the model
     xs = {}
     var_names = []
@@ -175,7 +148,6 @@ if __name__ == '__main__':
             (f'b_{var_name}', b0, lb, ub, var_name, 0)
         )
 
-    # %%
     # add uturn dummy
     if config.uturn:
         U = (g.senders[:,np.newaxis] == g.receivers[np.newaxis,:]) * (g.receivers[:,np.newaxis] == g.senders[np.newaxis,:])
@@ -185,23 +157,17 @@ if __name__ == '__main__':
         xs['uturn'] = [uturns, 'edge', 0]
         betas.append(('b_uturn', config.uturn_penalty, None, None, 'uturn', 1))
 
-    # %%
-    models = {}
-    if config.rl:
-        rl = RL(g, xs, betas, mu=1., mu_g=config.mu_g, estimate_mu=config.estimate_mu, gamma=config.gamma)
-        models['RL'] = rl
-    if config.prism:
-        prism = PrismRL(g, xs, betas, mu=1., mu_g=config.mu_g, method=config.state_key, estimate_mu=config.estimate_mu)
-        models['PrismRL'] = prism
+    # define model
+    rl = RL(g, xs, betas, mu=1., mu_g=config.mu_g, estimate_mu=config.estimate_mu, gamma=config.gamma)
+    
 
     ### Model Estimation
     # output
-    outputs = {}
-    if config.rl: outputs['RL'] = {i:{} for i in range(config.n_samples)}
-    if config.prism: outputs['PrismRL'] = {i:{} for i in range(config.n_samples)}
+    outputs = {i:{} for i in range(config.n_samples)}
+
     # function for record results
-    def record_res(i, model_type, res, stderr, t_val, L0, L_val, runtime, init_beta, gamma):
-        outputs[model_type][i] = {
+    def record_res(i, res, stderr, t_val, L0, L_val, runtime, init_beta, gamma):
+        outputs[i] = {
             'L0': L0,
             'LL': -res.fun,
             'Lv': L_val,
@@ -210,17 +176,17 @@ if __name__ == '__main__':
         }
         Vg = len(config.vars_g)
         for var_name, b, s, t, b0 in zip(var_names, res.x, stderr, t_val, init_beta):
-            outputs[model_type][i].update({
+            outputs[i].update({
                 f'beta_{var_name}': b, f'se_{var_name}': s, f't_{var_name}': t,
                 f'b0_{var_name}': b0
             })
         if config.estimate_mu:
-            outputs[model_type][i].update({
+            outputs[i].update({
                 'mu_g': res.x[-1], 'se_mu_g': stderr[-1], 't_mu_g': (res.x[-1] - 1)/stderr[-1],
             })
         else:
-            outputs[model_type][i].update({
-                'mu_g': models.get(model_type).mu_g,
+            outputs[i].update({
+                'mu_g': rl.mu_g,
             })
 
     if config.estimate_mu: init_beta += [config.mu_g]
@@ -231,89 +197,62 @@ if __name__ == '__main__':
 
         train_obs = sample['train']
         test_obs = sample['test']
-        # if config.min_n > 0:
-        #     train_obs = {d:train_obs[d] for d in dests_reduced}
-        #     test_obs = {d:test_obs[d] for d in dests_reduced}
 
-        # %%
-        if config.rl:
-            # fixed mu_g
-            # if not config.estimate_mu and config.n_samples > 1 and config.test_ratio == 0:
-            #     rl.mu_g = config.mu_g - 0.1 * i
+        # only observed destinations in samples
+        rl.partitions = list(train_obs.keys())
+
+        # initial parameter and likelihood
+        rl.beta = np.array(init_beta)
+        LL0_rl = rl.calc_likelihood(observations=train_obs)
+        print('RL model initial log likelihood:', LL0_rl)
+
+        try:
+            def f(x):
+                # compute probability
+                rl.eval_prob(x)
+                # calculate log-likelihood
+                LL = 0.
+                for key_, paths in train_obs.items():
+                    p = rl.p[key_]
+                    max_len, N = paths.shape
+                    Lk = np.zeros(N, dtype=np.float)
+                    for j in range(max_len - 1):
+                        L = np.array(p[paths[j], paths[j+1]])[0]
+                        assert (L > 0 ).all(), f'L includes zeros: key_={key_}, j={j}, pathj={paths[j]}, pathj+1={paths[j+1]}'
+                        Lk += np.log(L)
+                    LL += np.sum(Lk)
+                return -LL
+
+            # estimation
+            Niter = 1
+            timer.start()
+            # myfactr = 1e-10: for tolerance, add ", 'ftol': 1e-2 * np.finfo(float).eps, 'gtol': 1e-20 * np.finfo(float).eps"
+            results_rl = minimize_parallel(f, x0=rl.beta, bounds=rl.bounds,
+                    options={'disp':False, 'maxiter':100}, callback=callbackF) #, parallel={'max_workers':4, 'verbose': True}
+            rl_time = timer.stop()
+            print(f"estimation time is {rl_time}s.")
+            rl.beta = results_rl.x
+            # DO NOT use this t-value: it should be computed by bootstrapping
+            cov_matrix = results_rl.hess_inv if type(results_rl.hess_inv) == np.ndarray else results_rl.hess_inv.todense()
+            stderr = np.sqrt(np.diag(cov_matrix))
+            t_val = results_rl.x / stderr
+            if config.estimate_mu:
+                t_val[-1] = (results_rl.x[-1] - 1) / stderr[-1]
+            rl.print_results(results_rl, stderr, t_val, LL0_rl)
 
             # %%
-            # only observed destinations in samples
-            rl.partitions = list(train_obs.keys())
+            if config.test_ratio > 0:
+                # validation
+                rl.partitions = list(test_obs.keys())
+                LL_val_rl = rl.calc_likelihood(observations=test_obs)
+                print('RL model validation log likelihood:', LL_val_rl)
+            else:
+                LL_val_rl = 0.
 
-            # %%
-            # rl.gamma = config.gamma - 0.005 * i
-
-            # %%
-            rl.beta = np.array(init_beta)
-            LL0_rl = rl.calc_likelihood(observations=train_obs)
-            print('RL model initial log likelihood:', LL0_rl)
-
-            # %%
-            try:
-                # %%
-                # print(f"RL model estimation for sample {i}...")
-                # timer.start()
-                # results_rl = rl.estimate(observations=train_obs, method='L-BFGS-B', disp=False, hess='res')
-                # rl_time = timer.stop()
-                # print(f"estimation time is {rl_time}s.")
-                # rl.print_results(results_rl[0], results_rl[2], results_rl[3], LL0_rl)
-
-                # %%
-                def f(x):
-                    # compute probability
-                    rl.eval_prob(x)
-                    # calculate log-likelihood
-                    LL = 0.
-                    for key_, paths in train_obs.items():
-                        p = rl.p[key_]
-                        max_len, N = paths.shape
-                        Lk = np.zeros(N, dtype=np.float)
-                        for j in range(max_len - 1):
-                            L = np.array(p[paths[j], paths[j+1]])[0]
-                            assert (L > 0 ).all(), f'L includes zeros: key_={key_}, j={j}, pathj={paths[j]}, pathj+1={paths[j+1]}'
-                            Lk += np.log(L)
-                        LL += np.sum(Lk)
-                    return -LL
-
-                # %%
-                # estimation
-                Niter = 1
-                timer.start()
-                # myfactr = 1e-10: for tolerance, add ", 'ftol': 1e-2 * np.finfo(float).eps, 'gtol': 1e-20 * np.finfo(float).eps"
-                results_rl = minimize_parallel(f, x0=rl.beta, bounds=rl.bounds,
-                        options={'disp':False, 'maxiter':100}, callback=callbackF) #, parallel={'max_workers':4, 'verbose': True}
-                rl_time = timer.stop()
-                print(f"estimation time is {rl_time}s.")
-                rl.beta = results_rl.x
-                # calculate hessian
-                # hess_fn = Hessian(f)
-                # hess = hess_fn(rl.beta)
-                # cov_matrix = np.linalg.inv(hess)
-                cov_matrix = results_rl.hess_inv if type(results_rl.hess_inv) == np.ndarray else results_rl.hess_inv.todense()
-                stderr = np.sqrt(np.diag(cov_matrix))
-                t_val = results_rl.x / stderr
-                if config.estimate_mu:
-                    t_val[-1] = (results_rl.x[-1] - 1) / stderr[-1]
-                rl.print_results(results_rl, stderr, t_val, LL0_rl)
-
-                # %%
-                if config.test_ratio > 0:
-                    # validation
-                    rl.partitions = list(test_obs.keys())
-                    LL_val_rl = rl.calc_likelihood(observations=test_obs)
-                    print('RL model validation log likelihood:', LL_val_rl)
-                else:
-                    LL_val_rl = 0.
-                # %%
-                # record results
-                # record_res(i, 'RL', results_rl[0], results_rl[2], results_rl[3], LL0_rl, LL_val_rl, rl_time, init_beta)
-                record_res(i, 'RL', results_rl, stderr, t_val, LL0_rl, LL_val_rl, rl_time, init_beta, rl.gamma)
-                n_success += 1
-                print(f"RL was successfully estimated for sample {i}, and so far {n_success}; param. values = {rl.beta}")
-            except:
-                print(f"RL is not feasible for sample {i}; param. values = {rl.beta}")
+            # record results
+            # record_res(i, 'RL', results_rl[0], results_rl[2], results_rl[3], LL0_rl, LL_val_rl, rl_time, init_beta)
+            record_res(i, 'RL', results_rl, stderr, t_val, LL0_rl, LL_val_rl, rl_time, init_beta, rl.gamma)
+            n_success += 1
+            print(f"RL was successfully estimated for sample {i}, and so far {n_success}; param. values = {rl.beta}")
+        except:
+            print(f"RL is not feasible for sample {i}; param. values = {rl.beta}")
