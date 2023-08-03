@@ -3,6 +3,8 @@ results/
 tests/
 ValueFunc/
 __pycache__/
+yuki/
+misc/
 
 # files
 .DS_Store

@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import pandas as pd
 from optimparallel import minimize_parallel
@@ -8,7 +9,7 @@ from core.dataset import *
 import time
 import json
 import argparse
-np.random.seed(111)
+
 
 parser = argparse.ArgumentParser(description='Configuration file')
 arg_lists = []
@@ -26,10 +27,17 @@ def float_or_none(value):
     except:
         return None
 
+## General parameters
+gen_arg = add_argument_group('General')
+gen_arg.add_argument('--seed', type=int, default=111, help='random seed')
+gen_arg.add_argument('--root', type=str, default=None, help='root directory')
+gen_arg.add_argument('--data_dir', type=str, default='data', help='data directory')
+gen_arg.add_argument('--out_dir', type=str, default='test', help='output directory')
+gen_arg.add_argument('--net_name', type=str, default='kannai', help='network for application')
+
 # Model parameters
 model_arg = add_argument_group('Model')
 model_arg.add_argument('--parallel', type=str2bool, default=False, help='if implement parallel computation or not')
-model_arg.add_argument('--version', type=str, default='test', help='version name')
 
 # Hyperparameters
 model_arg.add_argument('--uturn', type=str2bool, default=True, help='if add uturn dummy or not')
@@ -69,7 +77,27 @@ def callbackF(x):
 # %%
 if __name__ == '__main__':
     config, _ = get_config()
-    config.version += '_' + time.strftime("%Y%m%dT%H%M")
+    np.random.seed(config.seed)
+
+    ## directories
+    # data directory
+    data_dir = os.path.join(config.data_dir, config.net_name)
+
+    # output directory
+    case_ = 'validation' if config.test_ratio > 0 else 'estimation'
+    if config.root is not None:
+        out_dir = os.path.join(config.root, "results", config.net_name, case_, config.out_dir)
+    else:
+        out_dir = os.path.join("results", config.net_name, case_, config.out_dir)
+    
+    try:
+        os.makedirs(out_dir, exist_ok = False)
+    except:
+        os.makedirs(out_dir + '_' + time.strftime("%Y%m%dT%H%M"), exist_ok = False)
+    
+    print("Run ", out_dir)
+
+    ## parameters
     # for consistency
     init_beta_l = [0. for _ in range(len(config.vars_l))]
     config.lb_l = [None for _ in range(len(config.vars_l))]
@@ -85,15 +113,14 @@ if __name__ == '__main__':
         config.lb_g += [None for _ in range(n_lack)]
         config.ub_g += [None for _ in range(n_lack)]
 
+    ## set timer
     timer = Timer()
     _ = timer.stop()
 
-    # %%
-    network_ = 'kannai'
-    dir_ = f'data/{network_}/'
-    link_data = pd.read_csv(dir_+'link.csv')
-    node_data = pd.read_csv(dir_+'node.csv')
-    obs_data = pd.read_csv(dir_+'observations_link.csv')
+    ## read network
+    link_data = pd.read_csv(os.path.join(data_dir, 'link.csv'))
+    node_data = pd.read_csv(os.path.join(data_dir, 'node.csv'))
+    obs_data = pd.read_csv(os.path.join(data_dir, 'observations_link.csv'))
 
     # add negative var of street without sidewalk
     link_data['length'] /= 10
@@ -104,11 +131,10 @@ if __name__ == '__main__':
     link_data['greenlen'] = link_data['vegetation'] * link_data['length']
     link_data['skylen'] = link_data['sky'] * link_data['length']
     features = link_data
-
+    # set observation data
     obs_data = reset_index(link_data, node_data, obs_data)
     links = {link_id: (from_, to_) for link_id, from_, to_ in link_data[['link_id', 'from_', 'to_']].values}
-
-    # read and prepare data for estimation
+    # prepare data for estimation
     dests, obs, obs_filled, n_paths, max_len, od_data, samples = read_mm_results(
         obs_data, links, min_n_paths=config.min_n, n_samples=config.n_samples, test_ratio=config.test_ratio, seed_=111, isBootstrap=config.isBootstrap)
 
@@ -120,11 +146,11 @@ if __name__ == '__main__':
         if n_loop > 0:
             print(f"number of paths including loops observed: {n_loop} for destination {d}")
 
-    # Graph
+    ## Define Graph
     g = Graph()
     g.read_data(node_data=node_data, link_data=link_data, od_data=od_data) #features=['length', 'walkwidth', 'green', 'gradient', 'crosswalk', 'walkratio', 'width', 'carst', 'greenlen']
 
-    # variables and parameters in the model
+    ## Define variables and parameters in the model
     xs = {}
     var_names = []
     betas = []
@@ -157,9 +183,8 @@ if __name__ == '__main__':
         xs['uturn'] = [uturns, 'edge', 0]
         betas.append(('b_uturn', config.uturn_penalty, None, None, 'uturn', 1))
 
-    # define model
+    ## Define model
     rl = RL(g, xs, betas, mu=1., mu_g=config.mu_g, estimate_mu=config.estimate_mu, gamma=config.gamma)
-    
 
     ### Model Estimation
     # output
@@ -189,6 +214,7 @@ if __name__ == '__main__':
                 'mu_g': rl.mu_g,
             })
 
+    # main estimation phase
     if config.estimate_mu: init_beta += [config.mu_g]
     n_success = 0
     for i, sample in enumerate(samples):
@@ -240,7 +266,7 @@ if __name__ == '__main__':
                 t_val[-1] = (results_rl.x[-1] - 1) / stderr[-1]
             rl.print_results(results_rl, stderr, t_val, LL0_rl)
 
-            # %%
+            # validation
             if config.test_ratio > 0:
                 # validation
                 rl.partitions = list(test_obs.keys())
@@ -250,9 +276,19 @@ if __name__ == '__main__':
                 LL_val_rl = 0.
 
             # record results
-            # record_res(i, 'RL', results_rl[0], results_rl[2], results_rl[3], LL0_rl, LL_val_rl, rl_time, init_beta)
-            record_res(i, 'RL', results_rl, stderr, t_val, LL0_rl, LL_val_rl, rl_time, init_beta, rl.gamma)
+            record_res(i, results_rl, stderr, t_val, LL0_rl, LL_val_rl, rl_time, init_beta, rl.gamma)
             n_success += 1
             print(f"RL was successfully estimated for sample {i}, and so far {n_success}; param. values = {rl.beta}")
         except:
             print(f"RL is not feasible for sample {i}; param. values = {rl.beta}")
+
+
+    ## record results
+    df_rl = pd.DataFrame(outputs).T
+    print(df_rl)
+    model_type = 'RL' if config.gamma == 1 else f'DRL{config.gamma}'
+    df_rl.to_csv(os.path.join(out_dir, f"{model_type}.csv"), index=True)    
+    
+    # write config file
+    with open(os.path.join(out_dir, "config.json"), mode="w") as f:
+        json.dump(config.__dict__, f, indent=4)
