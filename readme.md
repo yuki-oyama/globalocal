@@ -4,7 +4,7 @@ Python code for the estimation of a link-based recursive logit model with decomp
 ## Paper
 For more details, please see the paper
 
-Oyama, Y. (2023) [Global path preference and local response: A reward decomposition approach for network path choice analysis in the presence of locally perceived attributes](https://arxiv.org/abs/2307.08646). arXiv preprint.
+Oyama, Y. (2023) [Global path preference and local response: A reward decomposition approach for network path choice analysis in the presence of locally perceived attributes](https://arxiv.org/abs/2307.08646). *arXiv*.
 
 If you find this code useful, please cite the paper:
 ```
@@ -19,20 +19,21 @@ If you find this code useful, please cite the paper:
 ```
 
 ## Quick Start
-Estimate a global-local model using probe person data in the Kannai network.
+**Estimate** a global-local model using probe person data in the Kannai network.
 
 ```
 python pp_application.py --n_samples 1 --test_ratio 0
 ```
 
-For cross-validation, split the data into estimation and validation samples by setting test ratio greater than zero.
+For **cross-validation**, split the data into estimation and validation samples by setting test ratio greater than zero.
 
 ```
 python pp_application.py --n_samples 10 --test_ratio 0.2
 ```
 
-For bootstrapping, resample K sets of observations and estimate the model with each of them, by setting n_samples greater than 1 and test ratio to zero.
+For **bootstrapping**, resample K sets of observations and estimate the model with each of them, by setting n_samples greater than 1 and test ratio to zero. 
 
 ```
-python pp_application.py --n_samples 200 --test_ratio 0
+python pp_application.py --n_samples 200 --test_ratio 0 --isBootstrap True
 ```
+Note: this returns only the estimation results for K observations, so you should analyze the standard error or confidential intervals from the results afterwards.
