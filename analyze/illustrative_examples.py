@@ -153,7 +153,7 @@ eval_path_prob('case5', P5)
 # %%
 results = pd.DataFrame(output).T
 print(results)
-results.to_csv(f'yuki/results/{network_}/path_probs_2310.csv', index=True)
+results.to_csv(f'results/{network_}/path_probs_2310.csv', index=True)
 
 # %%
 # routes
@@ -265,7 +265,7 @@ def plot(save=False):
         ax.plot(x, ps, marker='', markeredgecolor="white", color=c, zorder=4, label=p_key)
     ax.legend()
     if save:
-        plt.savefig(f'yuki/results/{network_}/mug_sens_analysis_case{case}_ladder3_revMu_2310.eps')
+        plt.savefig(f'results/{network_}/mug_sens_analysis_case{case}_ladder3_revMu_2310.eps')
     else:
         plt.show()
 
@@ -307,7 +307,7 @@ def plotV(save=False):
         ax.plot(x, vs, marker='', markeredgecolor="white", color=c, zorder=4, label=v_key)
     ax.legend()
     if save:
-        plt.savefig(f'yuki/results/{network_}/mug_V_case{case}_2310.eps')
+        plt.savefig(f'results/{network_}/mug_V_case{case}_2310.eps')
     else:
         plt.show()
 
