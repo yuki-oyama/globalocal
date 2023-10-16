@@ -8,8 +8,8 @@ Ladder network (update: 2023/07)
 # %%
 import numpy as np
 import pandas as pd
-from model import RL, PrismRL
-from graph import Graph
+from core.model import RL
+from core.graph import Graph
 from scipy.sparse import csr_matrix
 import matplotlib.pyplot as plt
 %matplotlib inline
@@ -117,15 +117,15 @@ P3 = rl.p[d].toarray()
 eval_path_prob('case3', P3)
 
 # %%
-## Case 4: scape is perceived locally
+## Case 4: scape is perceived globally
 xs = {
     'exp_time': (x_free[0], 'link', 0),
     'dif_time': (x_free[1], 'link', 1),
-    'scape': (x_free[2], 'link', 1),
+    'scape': (x_free[2], 'link', 0),
 }
 betas = [
     ('b_e_time', -1., None, None, 'exp_time', 0),
-    ('b_scape', 2., None, None, 'scape', 0),
+    ('b_scape', 1., None, None, 'scape', 0),
 ]
 
 rl = RL(g, xs, betas, mu=1., mu_g=mu_g, estimate_mu=False)
@@ -134,9 +134,26 @@ P4 = rl.p[d].toarray()
 eval_path_prob('case4', P4)
 
 # %%
+## Case 5: scape is perceived locally
+xs = {
+    'exp_time': (x_free[0], 'link', 0),
+    'dif_time': (x_free[1], 'link', 1),
+    'scape': (x_free[2], 'link', 1),
+}
+betas = [
+    ('b_e_time', -1., None, None, 'exp_time', 0),
+    ('b_scape', 1., None, None, 'scape', 0),
+]
+
+rl = RL(g, xs, betas, mu=1., mu_g=mu_g, estimate_mu=False)
+rl.eval_prob()
+P5 = rl.p[d].toarray()
+eval_path_prob('case5', P5)
+
+# %%
 results = pd.DataFrame(output).T
 print(results)
-results.to_csv(f'results/{network_}/path_probs.csv', index=True)
+results.to_csv(f'yuki/results/{network_}/path_probs_2310.csv', index=True)
 
 # %%
 # routes
@@ -146,30 +163,30 @@ results.to_csv(f'results/{network_}/path_probs.csv', index=True)
 
 # %%
 ## Sensitivity analysis for mu_g
-sens_results_case3 = {}
 sens_results_case4 = {}
-sens_results = {3: sens_results_case3, 4: sens_results_case4}
+sens_results_case5 = {}
+sens_results = {4: sens_results_case4, 5: sens_results_case5}
 
 mu_gs = [1.0]
 delta_mu = 0.5
 mu_gs += [1 + delta_mu * i for i in range(1,31)]
 
 # %%
-case = 3
+case = 5
 
 # %%
-if case == 3:
+if case == 4:
     xs = {
         'exp_time': (x_free[0], 'link', 0),
         'dif_time': (x_free[1], 'link', 1),
-        'scape': (x_free[2], 'link', 1),
+        'scape': (x_free[2], 'link', 0),
     }
     betas = [
         ('b_e_time', -1., None, None, 'exp_time', 0),
-        ('b_d_time', -1., None, None, 'dif_time', 0),
-        ('b_scape', 0., None, None, 'scape', 0),
+        ('b_d_time', 0., None, None, 'dif_time', 0),
+        ('b_scape', 1., None, None, 'scape', 0),
     ]
-elif case == 4:
+elif case == 5:
     xs = {
         'exp_time': (x_free[0], 'link', 0),
         'dif_time': (x_free[1], 'link', 1),
@@ -177,8 +194,8 @@ elif case == 4:
     }
     betas = [
         ('b_e_time', -1., None, None, 'exp_time', 0),
-        ('b_d_time', -1., None, None, 'dif_time', 0),
-        ('b_scape', 2., None, None, 'scape', 0),
+        ('b_d_time', 0., None, None, 'dif_time', 0),
+        ('b_scape', 1., None, None, 'scape', 0),
     ]
 
 # %%
@@ -245,15 +262,15 @@ def plot(save=False):
     for key_, c in zip(routes.keys(), colors):
         p_key = f'P{key_}'
         ps = sens_df[p_key].values
-        ax.plot(x, ps, marker='o', markeredgecolor="white", color=c, zorder=4, label=p_key)
+        ax.plot(x, ps, marker='', markeredgecolor="white", color=c, zorder=4, label=p_key)
     ax.legend()
     if save:
-        plt.savefig(f'results/{network_}/mug_sens_analysis_case{case}_ladder3_revMu.eps')
+        plt.savefig(f'yuki/results/{network_}/mug_sens_analysis_case{case}_ladder3_revMu_2310.eps')
     else:
         plt.show()
 
 # %%
-plot(save=False)
+plot(save=True)
 
 # %%
 def plotV(save=False):
@@ -290,7 +307,7 @@ def plotV(save=False):
         ax.plot(x, vs, marker='', markeredgecolor="white", color=c, zorder=4, label=v_key)
     ax.legend()
     if save:
-        plt.savefig(f'results/{network_}/mug_V_case{case}.eps')
+        plt.savefig(f'yuki/results/{network_}/mug_V_case{case}_2310.eps')
     else:
         plt.show()
 
