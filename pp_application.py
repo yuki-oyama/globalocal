@@ -229,8 +229,10 @@ if __name__ == '__main__':
 
         # initial parameter and likelihood
         rl.beta = np.array(init_beta)
-        LL0_rl = rl.calc_likelihood(observations=train_obs)
+        # LL0_rl = rl.calc_likelihood(observations=train_obs)
+        LL0_rl = rl.eval_init_likelihood(observations=train_obs)
         print('RL model initial log likelihood:', LL0_rl)
+        hoge
 
         try:
             def f(x):

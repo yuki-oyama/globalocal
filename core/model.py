@@ -85,6 +85,7 @@ class RL(object):
         # probtbility
         self.p_pair = {}    # |OD| x E x 1
         self.p = {}         # |OD| x |S| x |S|
+        self.p0 = {}        # |OD| x |S| x |S|
 
         # value function
         self.z = {}
@@ -439,3 +440,44 @@ class RL(object):
         print(f'Final log likelihood: {-res.fun:.3f}')
         print(f'Adjusted rho-squared: {1-(-res.fun-len(res.x))/(L0):.2f}')
         print(f'AIC: {2*res.fun + 2*len(res.x):.3f}')
+
+    def eval_init_likelihood(self, observations):
+        # init prob
+        self.eval_p0()
+        
+        # calculate log-likelihood
+        if self.print_process: print('Evaluating init likelihood...')
+        LL = 0.
+        # Do not use parallel computing, which is too slow for this:
+        for key_, paths in observations.items():
+            p = self.p0[key_]
+            max_len, N = paths.shape
+            Lk = np.zeros(N, dtype=np.float)
+            for j in range(max_len - 1):
+                L = np.array(p[paths[j], paths[j+1]])[0]
+                assert (L > 0 ).all(), f'L includes zeros: key_={key_}, j={j}, pathj={paths[j]}, pathj+1={paths[j+1]}'
+                Lk += np.log(L)
+            LL += np.sum(Lk)
+        return LL
+
+    def eval_p0(self):
+        for key_ in self.partitions:
+            self.p0[key_] = self._eval_p0_partition(key_)
+
+    def _eval_p0_partition(self, d):
+        # input
+        L = len(self.graph.links)
+        # update v by dummy edges
+        dlinks = self.graph.dummy_backward_stars[d]
+        add_edges = [(dlink, L) for dlink in dlinks]
+        edges = np.concatenate([self.graph.edges, add_edges], axis=0)
+        senders, receivers = edges[:,0], edges[:,1]
+        p = csr_matrix(
+                        (np.append(np.ones_like(senders), [1.0]),
+                            (np.append(senders, [L]), np.append(receivers, [L]))
+                        )
+                        , shape=(L+1,L+1)) # L+1 x L+1
+        p /= p.sum(axis=1)
+        return p
+    
+    
