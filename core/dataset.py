@@ -77,7 +77,7 @@ def read_mm_results(obs_df, links, min_n_paths=1, n_samples=1,
     path, path_len = [], 0.
     trip_id = None
     n_paths, max_len = 0, 0
-    # users = []
+    # users, dists, steps = [], [], []
     for i in obs_df.index:
         link = obs_df.loc[i]
         # trip change
@@ -92,6 +92,8 @@ def read_mm_results(obs_df, links, min_n_paths=1, n_samples=1,
                 obs[d].append(path)
                 n_paths += 1
                 # users.append(link['monitor_id'])
+                # dists.append(path_len)
+                # steps.append(len(path))
                 if len(path) > max_len: max_len = len(path)
             # renew path
             path = [int(link['link_id'])]
@@ -100,7 +102,9 @@ def read_mm_results(obs_df, links, min_n_paths=1, n_samples=1,
             path.append(int(link['link_id']))
             path_len += link['link_length']
         trip_id = link['trip_id']
-    # print(np.unique(users))
+    
+    # return_stats = True
+    # if return_stats: return users, dists, steps
 
     # set the lengths of all paths for the same d to the same length
     ods = []

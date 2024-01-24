@@ -128,6 +128,7 @@ if __name__ == '__main__':
     link_data['sidewalklen'] = link_data['walkwidth2']/10 * link_data['length']
     link_data['carstlen'] = link_data['carst'] * link_data['length']
     # landscape features
+    link_data['greendummylen'] = link_data['green'] * link_data['length']
     link_data['greenlen'] = link_data['vegetation'] * link_data['length']
     link_data['skylen'] = link_data['sky'] * link_data['length']
     features = link_data
@@ -137,6 +138,8 @@ if __name__ == '__main__':
     # prepare data for estimation
     dests, obs, obs_filled, n_paths, max_len, od_data, samples = read_mm_results(
         obs_data, links, min_n_paths=config.min_n, n_samples=config.n_samples, test_ratio=config.test_ratio, seed_=111, isBootstrap=config.isBootstrap)
+    # users, dists, steps = read_mm_results(
+    #     obs_data, links, min_n_paths=config.min_n, n_samples=config.n_samples, test_ratio=config.test_ratio, seed_=111, isBootstrap=config.isBootstrap)
 
     # number of paths
     print(f"number of paths observed: {n_paths}")
@@ -232,7 +235,6 @@ if __name__ == '__main__':
         # LL0_rl = rl.calc_likelihood(observations=train_obs)
         LL0_rl = rl.eval_init_likelihood(observations=train_obs)
         print('RL model initial log likelihood:', LL0_rl)
-        hoge
 
         try:
             def f(x):

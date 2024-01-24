@@ -1,15 +1,18 @@
+# %%
 import pandas as pd
 import numpy as np
 
 # %%
-file_path = 'results/kannai/estimation/RL_GlobaLocal_w_mu_20230612T1824.csv'
+file_path = '../yuki/results/kannai/estimation/R1_global_green_BS/RL.csv'
 df = pd.read_csv(file_path, index_col=0)
-df = df.T
+# df = df.T
 df = df.dropna(how='any', axis=0)
 print(len(df))
 beta_names_g = []
 beta_names_l = []
 for vname in df.columns.values:
+    if len(vname) < 5:
+        continue
     if vname[:5] == 'beta_':
         if vname[-2:] == '_g':
             beta_names_g.append(vname)
@@ -49,3 +52,5 @@ stderrs
 
 # %%
 df['LL'].values[0]
+
+# %%
