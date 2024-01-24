@@ -131,6 +131,8 @@ if __name__ == '__main__':
     link_data['greendummylen'] = link_data['green'] * link_data['length']
     link_data['greenlen'] = link_data['vegetation'] * link_data['length']
     link_data['skylen'] = link_data['sky'] * link_data['length']
+    link_data['walllen'] = link_data['wall'] * link_data['length']
+    link_data['buildlen'] = link_data['building'] * link_data['length']
     features = link_data
     # set observation data
     obs_data = reset_index(link_data, node_data, obs_data)
