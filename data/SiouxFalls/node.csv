@@ -1,4 +1,4 @@
-node_id,x,y,x_original,y_original
+fid,x,y,x_original,y_original
 1,5,51,50000,510000
 2,32,51,320000,510000
 3,5,44,50000,440000

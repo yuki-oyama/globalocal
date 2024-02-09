@@ -2,18 +2,6 @@ import numpy as np
 import pandas as pd
 from copy import deepcopy
 
-mm_renames = {
-    'モニターID': 'monitor_id',
-    'ダイアリーID': 'trip_id',
-    '交通手段': 'mode',
-    'リンクID': 'link_id',
-    'リンク出発時刻': 'dep_time',
-    '所要時間(s)': 'dur_sec',
-    '速度(km/h)': 'speed_km_h',
-    'リンクコスト': 'link_cost',
-    'リンク長(m)': 'link_length'
-}
-
 def count_loops(obs):
     n_loops = {k:0 for k in obs.keys()}
     for k in obs.keys():
@@ -42,12 +30,7 @@ def reset_index(link_data, node_data, obs_data):
     link_data['to_'] = [node_idx[n] for n in to_nodes]
 
     if obs_data is not None:
-        # rename japanese to english
-        if 'モニターID' in obs_data.columns.values:
-            renamed_obs_data = obs_data.rename(columns=mm_renames)
-        else:
-            renamed_obs_data = obs_data
-
+        renamed_obs_data = obs_data
         links = renamed_obs_data['link_id'].values
         renamed_obs_data['link_id'] = [link_idx[l] for l in links]
         return renamed_obs_data
@@ -68,10 +51,6 @@ def read_mm_results(obs_df, links, min_n_paths=1, n_samples=1,
     # dummy link for destination (common among all destinations)
     d_dummy_link = max(list(links.keys())) + 1
 
-    # rename japanese to english
-    if 'モニターID' in obs_df.columns.values:
-        obs_df = obs_df.rename(columns=mm_renames)
-
     # obtain paths
     dests, obs = [], {}
     path, path_len = [], 0.
@@ -83,7 +62,7 @@ def read_mm_results(obs_df, links, min_n_paths=1, n_samples=1,
         # trip change
         if trip_id != link['trip_id']:
             # do not record when n_links <= 1
-            if len(path) > 1 and path_len >= 100:
+            if len(path) > 1 and path_len >= 10:
                 d = links[path[-1]][1]
                 if d not in dests:
                     dests.append(d)
