@@ -24,8 +24,8 @@ If you find this code useful, please cite the paper:
 I have prepared synthetic data generated in the Sioux Falls network.
 Two synthetic datasets are available in the _data_ folder:
 
-- **data_G0.csv**: simulated by a global model (i.e., the original recursive logit model)
-- **data_L0.csv**: simulated by a global-local model (i.e., capacity is assumed to have a local impact)
+- **data_G0.csv**: simulated by a global model, i.e., the original recursive logit model
+- **data_L0.csv**: simulated by a global-local model, wherein capacity is assumed to have a local impact.
 
 You can specify data to use within the **run_estimation.py** code.
 
@@ -39,7 +39,7 @@ You can specify data to use within the **run_estimation.py** code.
 ```
 </details>
 
-## Quick Start
+## Quick Start for Estimation
 **Estimate** a global-local model with **both global and local attributes** by specifyning ```vars_g``` (global attribute names) and ```vars_l``` with the initial values, upper and lower bounds.
 
 ```
