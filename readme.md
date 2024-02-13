@@ -4,19 +4,20 @@ Python code for the estimation of a link-based route choice model with decompose
 ## Paper
 For more details, please see the paper
 
-Oyama, Y. (2023) [Global path preference and local response: A reward decomposition approach for network path choice analysis in the presence of locally perceived attributes](https://arxiv.org/abs/2307.08646). *arXiv*.
-
-Oyama, Y. (forthcoming) Global path preference and local response: A reward decomposition approach for network path choice analysis in the presence of visually perceived attributes. Transportation Research Part A: Policy and Practice.
+Oyama, Y. (2024) [Global path preference and local response: A reward decomposition approach for network path choice analysis in the presence of visually perceived attributes](https://www.sciencedirect.com/science/article/pii/S0965856424000466). Transportation Research Part A: Policy and Practice 181: 103998 (Open Access). 
 
 If you find this code useful, please cite the paper:
 ```
 @article{oyama2023globalocal,
-  title = {Global path preference and local response: A reward decomposition approach for network path choice analysis in the presence of locally perceived attributes},
-  author = {Oyama, Yuki},
-  year = {2023},
-  eprint = {2307.08646},
-  archivePrefix = {arXiv},
-  primaryClass = {physics.soc-ph}
+  title = {Global path preference and local response: A reward decomposition approach for network path choice analysis in the presence of visually perceived attributes},
+  journal = {Transportation Research Part A: Policy and Practice},
+  volume = {181},
+  pages = {103998},
+  year = {2024},
+  issn = {0965-8564},
+  doi = {https://doi.org/10.1016/j.tra.2024.103998},
+  url = {https://www.sciencedirect.com/science/article/pii/S0965856424000466},
+  author = {Yuki Oyama},
 }
 ```
 
