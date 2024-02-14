@@ -8,7 +8,7 @@ Oyama, Y. (2024) [Global path preference and local response: A reward decomposit
 
 If you find this code useful, please cite the paper:
 ```
-@article{oyama2023globalocal,
+@article{oyama2024globalocal,
   title = {Global path preference and local response: A reward decomposition approach for network path choice analysis in the presence of visually perceived attributes},
   journal = {Transportation Research Part A: Policy and Practice},
   volume = {181},
